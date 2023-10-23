@@ -1,7 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"apibgo/internal/config"
+	"fmt"
+)
 
 func main() {
-	fmt.Println("Hello world !")
+	cfg := config.MustLoad()
+
+	fmt.Println(cfg)
 }
