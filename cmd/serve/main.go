@@ -2,11 +2,14 @@ package main
 
 import (
 	"apibgo/internal/config"
-	"fmt"
+
+	"apibgo/pkg/logger"
 )
 
 func main() {
 	cfg := config.MustLoad()
+	log := logger.Setup(cfg.Env)
 
-	fmt.Println(cfg)
+	log.Info("starting restapi server")
+	log.Debug("debug messages are enabled")
 }
