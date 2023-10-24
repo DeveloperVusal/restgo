@@ -1,16 +1,16 @@
 pgsql:
   master:
-    host: 'localhost'
-    port: 5432
-    username: 'postgre'
-    password: 'postgre'
-    database: 'foo'
+    host: ${DB_HOST_M}
+    port: ${DB_PORT_M}
+    username: ${DB_USERNAME_M}
+    password: ${DB_PASSWORD_M}
+    database: ${DB_DATABASE_M}
   slave:
-  host: 'localhost'
-    port: 5433
-    username: 'postgre'
-    password: 'postgre'
-    database: 'foo'
+    host: ${DB_HOST_S}
+    port: ${DB_PORT_S}
+    username: ${DB_USERNAME_S}
+    password: ${DB_PASSWORD_S}
+    database: ${DB_DATABASE_S}
 mysql:
   master:
      host: 'localhost'
