@@ -5,8 +5,6 @@ import (
 	"os"
 	"time"
 
-	"apibgo/pkg/univenv"
-
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
@@ -23,9 +21,6 @@ type HTTPServer struct {
 }
 
 func MustLoad() *Config {
-	// Load .env files
-	univenv.Load()
-
 	configPath := os.Getenv("CONFIG_PATH")
 
 	if configPath == "" {
