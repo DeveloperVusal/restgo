@@ -1,0 +1,21 @@
+pgsql:
+  master:
+    host: 'localhost'
+    port: 5432
+    username: 'postgre'
+    password: 'postgre'
+    database: 'foo'
+  slave:
+  host: 'localhost'
+    port: 5433
+    username: 'postgre'
+    password: 'postgre'
+    database: 'foo'
+mysql:
+  master:
+     host: 'localhost'
+      port: 3306
+      username: 'mysql'
+      password: ''
+      database: 'foo'
+

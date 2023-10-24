@@ -1,6 +1,6 @@
 package repository
 
-type DBRepository interface {
+type MainStorage interface {
 	// func Get()
 	// func Create()
 	// func Save()
