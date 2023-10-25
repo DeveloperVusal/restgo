@@ -20,11 +20,12 @@ func Run() {
 	cfg := config.MustLoad()
 	log := logger.Setup(cfg.Env)
 
+	// db := storage.MustLoad()
+
+	log.Info("starting restapi server")
+
 	r := mux.NewRouter()
 	rest.NewRouter(r, &routes.Auth{}, &routes.User{})
 	r.Use(mux.CORSMethodMiddleware(r))
 	http.ListenAndServe(cfg.HTTPServer.Address, r)
-
-	log.Info("starting restapi server")
-	log.Debug("debug messages are enabled")
 }

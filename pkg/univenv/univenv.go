@@ -1,9 +1,13 @@
 package univenv
 
 import (
+	"bytes"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -49,4 +53,27 @@ func reverseWalkFile(res *[]string, path string, ext string) {
 	}
 
 	reverseWalkFile(res, filepath.Join(path, "/../"), ext)
+}
+
+func YamlWithEnv(path string) (io.Reader, error) {
+	yfile, err := os.ReadFile(path)
+
+	if err != nil {
+		return nil, err
+	}
+
+	text := string(yfile[:])
+
+	re := regexp.MustCompile(`\${.*}`)
+	matches := re.FindAllString(text, -1)
+
+	for _, match := range matches {
+		env := match[2:]
+		env = env[:len(env)-1]
+		text = strings.ReplaceAll(text, match, os.Getenv(env))
+	}
+
+	r := bytes.NewReader([]byte(text))
+
+	return r, nil
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"apibgo/pkg/univenv"
 	"log"
 	"os"
 	"time"
@@ -28,14 +29,20 @@ func MustLoad() *Config {
 	}
 
 	// check if file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, err := os.Stat(configPath + "main.yaml"); os.IsNotExist(err) {
 		log.Fatalf("config file does not exist: %s", configPath)
+	}
+
+	withEnv, err := univenv.YamlWithEnv(configPath + "main.yaml")
+
+	if err != nil {
+		log.Fatalf("cannot set env variables to yaml a file: %s", err)
 	}
 
 	var cfg Config
 
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("cannot read config: %s", err)
+	if err := cleanenv.ParseYAML(withEnv, &cfg); err != nil {
+		log.Fatalf("MAIN.YAML -> cannot read config: %s", err)
 	}
 
 	return &cfg
