@@ -2,7 +2,7 @@ This project making for the [search engine](https://butago.com/) and also for my
 
 For first, execute command:
 ```bash
-npm instll
+npm install
 ```
 
 Next execute this command for run server:
