@@ -1,0 +1,8 @@
+#!/bin/bash
+
+curVersion=$(cat package.json | grep version |  awk '{print $2}' | sed 's/"//g' | sed 's/,//g')
+newVersion=( ${curVersion//./ } )
+((newVersion[2]++))
+cat package.json | sed "s/version\": \"${curVersion}/version\": \"${newVersion[0]}.${newVersion[1]}.${newVersion[2]}/" > package.json.temp
+mv package.json.temp package.json
+git add package.json
