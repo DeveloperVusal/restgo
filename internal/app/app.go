@@ -24,8 +24,12 @@ func Run() {
 
 	log.Info("starting restapi server")
 
+	_routes := []rest.Handler{
+		&routes.Auth{}, &routes.User{},
+	}
+
 	r := mux.NewRouter()
-	rest.NewRouter(r, &routes.Auth{}, &routes.User{})
+	rest.NewRouter(r, _routes...)
 	r.Use(mux.CORSMethodMiddleware(r))
 	http.ListenAndServe(cfg.HTTPServer.Address, r)
 }
