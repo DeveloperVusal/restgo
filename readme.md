@@ -7,5 +7,5 @@ npm install
 
 Next execute this command for run server:
 ```bash
-npm run dev
+npm run serve
 ```
