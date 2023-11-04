@@ -1,9 +1,10 @@
 {
   "name": "restgo",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "scripts": {
     "serve": "nodemon --exec go run ./cmd/serve/main.go --ext go",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install"
   },
   "devDependencies": {
     "husky": "^8.0.3",
