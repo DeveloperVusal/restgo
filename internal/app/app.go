@@ -2,8 +2,11 @@ package app
 
 import (
 	"net/http"
+	"os"
 
 	"apibgo/internal/config"
+	"apibgo/internal/storage"
+	"apibgo/internal/storage/pgsql"
 	"apibgo/internal/transport/rest"
 	"apibgo/internal/transport/rest/routes"
 
@@ -20,8 +23,15 @@ func Run() {
 	cfg := config.MustLoad()
 	log := logger.Setup(cfg.Env)
 
-	// db := storage.MustLoad()
+	dbcfgs := storage.MustLoad()
+	_, err := pgsql.New(dbcfgs, "master")
 
+	if err != nil {
+		log.Error("failed to init storage", err)
+		os.Exit(1)
+	}
+
+	log.Info("starting database")
 	log.Info("starting restapi server")
 
 	_routes := []rest.Handler{

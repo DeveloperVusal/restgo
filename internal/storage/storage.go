@@ -26,13 +26,6 @@ type Cluster struct {
 	Database string `yaml:"database"`
 }
 
-type MainStorage interface {
-	// func Get()
-	// func Create()
-	// func Save()
-	// func Delete()
-}
-
 func MustLoad() *Config {
 	configPath := os.Getenv("CONFIG_PATH")
 
