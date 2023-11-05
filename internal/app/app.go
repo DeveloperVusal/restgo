@@ -11,6 +11,7 @@ import (
 	"apibgo/internal/transport/rest/routes"
 
 	"apibgo/pkg/logger"
+	"apibgo/pkg/logger/feature/slog"
 	"apibgo/pkg/univenv"
 
 	"github.com/gorilla/mux"
@@ -24,12 +25,13 @@ func Run() {
 	log := logger.Setup(cfg.Env)
 
 	dbcfgs := storage.MustLoad()
-	_, err := pgsql.New(dbcfgs, "master")
+	pg, err := pgsql.New(dbcfgs, "master")
 
 	if err != nil {
-		log.Error("failed to init storage", err)
+		log.Error("failed to init storage", slog.Err(err))
 		os.Exit(1)
 	}
+	_ = pg
 
 	log.Info("starting database")
 	log.Info("starting restapi server")
