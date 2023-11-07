@@ -1,4 +1,11 @@
-CREATE TYPE users_confirm_status AS ENUM ('quest', 'success', 'waiting', 'error');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'users_confirm_status') THEN
+        CREATE TYPE users_confirm_status AS ENUM ('quest', 'success', 'waiting', 'error');
+    END IF;
+    --more types here...
+END$$;
+
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL,
   email VARCHAR(150) NOT NULL,
@@ -20,7 +27,3 @@ CREATE TABLE IF NOT EXISTS users (
 -- COMMENT ON COLUMN users.confirm_code IS 'Код подтверждения';
 -- COMMENT ON COLUMN users.confirmed_at IS 'Время последнего подтверждения';
 -- COMMENT ON COLUMN users.confirm_status IS 'Статус кода подтверждения';
-
-
-INSERT INTO users
-  (id, email, password, confirm_status, activation, name. surname, token_secret_key, confirmed_at, created_at) VALUES (1, 'butago_quest', 'butago_quest', 'quest', true, 'Quest', 'Quest', '000000', NOW()::timestamp, NOW()::timestamp);

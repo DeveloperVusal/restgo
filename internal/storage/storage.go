@@ -24,6 +24,7 @@ type Cluster struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
+	Migrate  bool   `yaml:"migrate"`
 }
 
 func MustLoad() *Config {

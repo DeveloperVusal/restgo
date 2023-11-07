@@ -4,10 +4,14 @@ import (
 	"apibgo/internal/storage"
 	"apibgo/pkg/db/pgsql"
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -41,17 +45,32 @@ func New(cfg *storage.Config, conn string) (*Storage, error) {
 	}
 
 	cfgPort, _ := strconv.Atoi(dsn.Port)
-	dsnstr := pgsql.Dsn{
+	dsnobj := pgsql.Dsn{
 		Host:     dsn.Host,
 		Port:     cfgPort,
 		Username: dsn.Username,
 		Password: dsn.Password,
 		Database: dsn.Database,
 	}
-	db, err := pgsql.Conn(pgsql.DsnBuild(dsnstr))
+	dsnstr := pgsql.DsnBuild(dsnobj)
+	db, err := pgsql.Conn(dsnstr)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if dsn.Migrate {
+		mig, err := migrate.New("file://"+os.Getenv("MIGRATIONS_PATH"), dsnstr+"?sslmode=disable")
+
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
+
+		err = mig.Up()
+
+		if err != nil && err != migrate.ErrNoChange {
+			return nil, fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	return &Storage{db: db}, nil

@@ -1,0 +1,1 @@
+DELETE FROM TABLE users WHERE id = 1;

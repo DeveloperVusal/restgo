@@ -5,6 +5,7 @@ pgsql:
     username: '${DB_USERNAME_M}'
     password: '${DB_PASSWORD_M}'
     database: '${DB_DATABASE_M}'
+    migrate: true
   slave:
     host: '${DB_HOST_S}'
     port: '${DB_PORT_S}'
