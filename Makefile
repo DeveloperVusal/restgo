@@ -7,4 +7,4 @@ ifneq ($(strip $(dbext)),)
 endif
 
 migrate:
-	migrate create -ext $(migrate_ext) -dir $(CURDIR)/schemes -seq init
+	migrate create -ext $(migrate_ext) -dir $(CURDIR)/schemes -seq $(name)
