@@ -45,6 +45,6 @@ brew install golang-migrate
 So that will create migrations, run one of the command below:
 ```bash
 make migrate
-make migrate dbext=json
+make migrate fext=json
 ```
 > The command `make migrate` as default creating sql files
