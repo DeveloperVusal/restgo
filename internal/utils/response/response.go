@@ -1,6 +1,9 @@
 package response
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"net/http"
+)
 
 type Status string
 
@@ -15,6 +18,7 @@ type Response struct {
 	Status  Status
 	Message string
 	Result  any
+	Cookies []*http.Cookie
 }
 
 func (response *Response) CreateResponseData() []byte {
