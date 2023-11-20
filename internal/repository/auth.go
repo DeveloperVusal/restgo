@@ -6,84 +6,50 @@ import (
 	"apibgo/internal/domain"
 	"apibgo/internal/storage/pgsql"
 
-	"github.com/doug-martin/goqu/v9"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type Auths interface {
-	Create(ctx context.Context, au domain.Auth) (pgconn.CommandTag, error)
-	Save(ctx context.Context, au domain.Auth, sql string, args ...interface{}) (pgconn.CommandTag, error)
-	Delete(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error)
-	Find(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
-	First(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
-	Last(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+type AuthRI interface {
+	GetUser(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error)
+	GetAuth(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error)
+	DeleteAuth(ctx context.Context, id int) (pgx.Rows, error)
+	InsertAuth(ctx context.Context, args []interface{}) (pgx.Rows, error)
 }
 
 type AuthRepo struct {
-	db *pgx.Conn
+	db    *pgx.Conn
+	store *pgsql.Storage
 }
 
 func NewAuthRepo(store *pgsql.Storage) *AuthRepo {
 	return &AuthRepo{
-		db: store.Db,
+		db:    store.Db,
+		store: store,
 	}
 }
 
-func (ar *AuthRepo) Create(ctx context.Context, au domain.Auth) (pgconn.CommandTag, error) {
-	ds := goqu.Insert(au.TableName()).Rows(au)
-	sql, args, _ := ds.ToSQL()
-	cmmtag, err := ar.db.Exec(ctx, sql, args...)
+func (ar *AuthRepo) GetUser(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error) {
+	sql := `SELECT id, password, activation FROM users WHERE email = $1 LIMIT 1`
+	args := []interface{}{dto.Email}
 
-	return cmmtag, err
+	return ar.db.Query(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) Save(ctx context.Context, au domain.Auth, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	ds := goqu.Update(au.TableName()).Set(au).Where(goqu.L(sql, args...))
-	_sql, _args, _ := ds.ToSQL()
-	cmmtag, err := ar.db.Exec(ctx, _sql, _args...)
+func (ar *AuthRepo) GetAuth(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error) {
+	sql := `SELECT id FROM auths WHERE user_agent = $1 AND ip = $2 AND device = $3 LIMIT 1`
+	args := []interface{}{dto.UserAgent, dto.Ip, dto.Device}
 
-	return cmmtag, err
+	return ar.db.Query(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) Delete(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	au := domain.Auth{}
-	ds := goqu.Delete(au.TableName()).Where(goqu.L(sql, args...))
-	_sql, _args, _ := ds.ToSQL()
-	cmmtag, err := ar.db.Exec(ctx, _sql, _args...)
+func (ar *AuthRepo) DeleteAuth(ctx context.Context, id int) (pgx.Rows, error) {
+	sql := `DELETE FROM auths WHERE id = $1`
 
-	return cmmtag, err
+	return ar.db.Query(ctx, sql, id)
 }
 
-func (ar *AuthRepo) Find(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	au := domain.Auth{}
-	ds := goqu.From(au.TableName()).Where(goqu.L(sql, args...))
-	_sql, _args, _ := ds.ToSQL()
-	rows, err := ar.db.Query(ctx, _sql, _args...)
+func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgx.Rows, error) {
+	sql := `INSERT INTO auths (user_id, access_toen, refresh_toen, ip, device, user_agent) VALUES ($1, $2, $3, $4, $5, $6)`
 
-	return rows, err
-}
-
-func (ar *AuthRepo) First(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	au := domain.Auth{}
-	ds := goqu.From(au.TableName()).
-		Where(goqu.L(sql, args...)).
-		Limit(1).
-		Order(goqu.I("id").Asc())
-	_sql, _args, _ := ds.ToSQL()
-	rows, err := ar.db.Query(ctx, _sql, _args...)
-
-	return rows, err
-}
-
-func (ar *AuthRepo) Last(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	au := domain.Auth{}
-	ds := goqu.From(au.TableName()).
-		Where(goqu.L(sql, args...)).
-		Limit(1).
-		Order(goqu.I("id").Desc())
-	_sql, _args, _ := ds.ToSQL()
-	rows, err := ar.db.Query(ctx, _sql, _args...)
-
-	return rows, err
+	return ar.db.Query(ctx, sql, args...)
 }
