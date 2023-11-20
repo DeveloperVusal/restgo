@@ -1,10 +1,11 @@
-package models
+package domain
 
 import "time"
 
-type Users struct {
+type User struct {
 	Id             uint
 	Email          string
+	Password       string
 	Activation     bool
 	Name           string
 	Surname        string
@@ -14,4 +15,8 @@ type Users struct {
 	ConfirmStatus  string
 	UpdatedAt      time.Time
 	CreatedAt      time.Time
+}
+
+func (a *User) TableName() string {
+	return "users"
 }
