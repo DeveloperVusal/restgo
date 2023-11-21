@@ -24,7 +24,7 @@ type Auth struct {
 }
 
 func (a *Auth) NewHandler(r *mux.Router) {
-	r.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/auth/login/", func(w http.ResponseWriter, r *http.Request) {
 		log := logger.Setup(a.Config.Env)
 		pg, err := pgsql.New(a.Storage, "master")
 
