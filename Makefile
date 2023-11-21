@@ -17,3 +17,6 @@ endif
 
 migrate-action:
 	migrate -source file://schemes -database $(migrate_database) $(cmd)
+
+serve:
+	go run ./cmd/serve/main.go
