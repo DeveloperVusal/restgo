@@ -43,8 +43,14 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		dto.Ip = utils.RealIp(r)
 		dto.UserAgent = r.UserAgent()
 
-		authService.Login(context.Background(), dto)
+		response, err := authService.Login(context.Background(), dto)
 
-		w.Write([]byte("Welcome"))
+		if err != nil {
+			log.Error("failed to execute Login service", slog.Err(err))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodPost)
 }

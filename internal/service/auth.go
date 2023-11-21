@@ -39,22 +39,14 @@ func NewAuthService(store *pgsql.Storage) *AuthService {
 func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoAuth := repository.NewAuthRepo(ar.db)
-	rows, err := repoAuth.GetUser(ctx, dto)
-
-	if err != nil {
-		return nil, err
-	}
+	row := repoAuth.GetUser(ctx, dto)
 
 	var user_id int
 	var user_password string
 	var user_activation bool
 
 	// Get above columns from row result
-	err = rows.Scan(&user_id, &user_password, &user_activation)
-
-	if err != nil {
-		return nil, err
-	}
+	row.Scan(&user_id, &user_password, &user_activation)
 
 	// If valid data
 	if user_id > 0 && pswd.CheckPasswordHash(dto.Password, user_password) {
@@ -68,30 +60,22 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response
 		}
 
 		// Checking exist already authentication a user
-		rows, err := repoAuth.GetAuth(ctx, dto)
-
-		if err != nil {
-			return nil, err
-		}
+		row := repoAuth.GetAuth(ctx, dto)
 
 		var auth_id int
 
 		// Get above columns from row result
-		err = rows.Scan(&auth_id)
-
-		if err != nil {
-			return nil, err
-		}
+		row.Scan(&auth_id)
 
 		// If exists, then we delete the record
 		if auth_id > 0 {
-			rows, err := repoAuth.DeleteAuth(ctx, auth_id)
+			cmdtag, err := repoAuth.DeleteAuth(ctx, auth_id)
 
 			if err != nil {
 				return nil, err
 			}
 
-			if rows.CommandTag().RowsAffected() <= 0 {
+			if cmdtag.RowsAffected() <= 0 {
 				return nil, err
 			}
 		}
@@ -105,14 +89,14 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response
 
 		// Inserting in sessions
 		args := []interface{}{user_id, access, refresh, dto.Ip, dto.Device, dto.UserAgent}
-		rows, err = repoAuth.InsertAuth(ctx, args)
+		cmdtag, err := repoAuth.InsertAuth(ctx, args)
 
 		if err != nil {
 			return nil, err
 		}
 
 		// If successfully, then we return the Response
-		if rows.CommandTag().RowsAffected() > 0 {
+		if cmdtag.RowsAffected() > 0 {
 			var _cookies []*http.Cookie
 
 			_cookies = append(_cookies, &http.Cookie{

@@ -7,13 +7,14 @@ import (
 	"apibgo/internal/storage/pgsql"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type AuthRI interface {
-	GetUser(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error)
-	GetAuth(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error)
-	DeleteAuth(ctx context.Context, id int) (pgx.Rows, error)
-	InsertAuth(ctx context.Context, args []interface{}) (pgx.Rows, error)
+	GetUser(ctx context.Context, dto domain.AuthDto) pgx.Row
+	GetAuth(ctx context.Context, dto domain.AuthDto) pgx.Row
+	DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error)
+	InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 }
 
 type AuthRepo struct {
@@ -28,28 +29,28 @@ func NewAuthRepo(store *pgsql.Storage) *AuthRepo {
 	}
 }
 
-func (ar *AuthRepo) GetUser(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error) {
+func (ar *AuthRepo) GetUser(ctx context.Context, dto domain.AuthDto) pgx.Row {
 	sql := `SELECT id, password, activation FROM users WHERE email = $1 LIMIT 1`
 	args := []interface{}{dto.Email}
 
-	return ar.db.Query(ctx, sql, args...)
+	return ar.db.QueryRow(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) GetAuth(ctx context.Context, dto domain.AuthDto) (pgx.Rows, error) {
+func (ar *AuthRepo) GetAuth(ctx context.Context, dto domain.AuthDto) pgx.Row {
 	sql := `SELECT id FROM auths WHERE user_agent = $1 AND ip = $2 AND device = $3 LIMIT 1`
 	args := []interface{}{dto.UserAgent, dto.Ip, dto.Device}
 
-	return ar.db.Query(ctx, sql, args...)
+	return ar.db.QueryRow(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) DeleteAuth(ctx context.Context, id int) (pgx.Rows, error) {
+func (ar *AuthRepo) DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error) {
 	sql := `DELETE FROM auths WHERE id = $1`
 
-	return ar.db.Query(ctx, sql, id)
+	return ar.db.Exec(ctx, sql, id)
 }
 
-func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgx.Rows, error) {
-	sql := `INSERT INTO auths (user_id, access_toen, refresh_toen, ip, device, user_agent) VALUES ($1, $2, $3, $4, $5, $6)`
+func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error) {
+	sql := `INSERT INTO auths (user_id, access_token, refresh_token, ip, device, user_agent, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()::timestamp)`
 
-	return ar.db.Query(ctx, sql, args...)
+	return ar.db.Exec(ctx, sql, args...)
 }
