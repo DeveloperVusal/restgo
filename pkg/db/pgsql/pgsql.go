@@ -10,10 +10,15 @@ import (
 )
 
 func Conn(dsn string) (*pgx.Conn, error) {
-	// config.BuildStatementCache = func(conn *pgconn.PgConn) stmtcache.Cache {
-	// 	return stmtcache.New(conn, stmtcache.ModeDescribe, 1024)
-	// }
-	db, err := pgx.Connect(context.Background(), dsn)
+	conf, err := pgx.ParseConfig(dsn)
+
+	if err != nil {
+		return nil, err
+	}
+
+	conf.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
+
+	db, err := pgx.ConnectConfig(context.Background(), conf)
 
 	return db, err
 }
