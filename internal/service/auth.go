@@ -9,14 +9,15 @@ import (
 	"apibgo/internal/domain"
 	"apibgo/internal/repository"
 	"apibgo/internal/storage/pgsql"
+	"apibgo/internal/utils/auth/generate"
 	"apibgo/internal/utils/response"
 	"apibgo/pkg/auth/ajwt"
 	"apibgo/pkg/auth/pswd"
 )
 
 type Auths interface {
-	Login(ctx context.Context, dto domain.AuthDto) (*response.Response, error)
-	Registration(ctx context.Context)
+	Login(ctx context.Context, dto domain.LoginDto) (*response.Response, error)
+	Registration(ctx context.Context, dto domain.RegistrationDto) (*response.Response, error)
 	Activation(ctx context.Context)
 	Logout(ctx context.Context)
 	Recover(ctx context.Context)
@@ -36,10 +37,10 @@ func NewAuthService(store *pgsql.Storage) *AuthService {
 
 }
 
-func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response.Response, error) {
+func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoAuth := repository.NewAuthRepo(ar.db)
-	row := repoAuth.GetUser(ctx, dto)
+	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
 
 	var user_id int
 	var user_password string
@@ -54,7 +55,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response
 		if !user_activation {
 			return &response.Response{
 				Code:    response.ErrorAccountActivate,
-				Status:  response.Error,
+				Status:  response.StatusError,
 				Message: "account not activated",
 			}, nil
 		}
@@ -108,8 +109,8 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response
 			})
 
 			return &response.Response{
-				Code:    0,
-				Status:  response.Success,
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
 				Message: "Data is got",
 				Result: map[string]interface{}{
 					"access_token":  access,
@@ -121,4 +122,84 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.AuthDto) (*response
 	}
 
 	return nil, nil
+}
+
+func (ar *AuthService) Registration(ctx context.Context, dto domain.RegistrationDto) (*response.Response, error) {
+	// Trying find a user in the users table
+	repoAuth := repository.NewAuthRepo(ar.db)
+	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
+
+	var user_id int
+	var user_password string
+	var user_activation bool
+
+	// Get above columns from row result
+	row.Scan(&user_id, &user_password, &user_activation)
+
+	// If valid data
+	if user_id <= 0 {
+		// If don't match passwords
+		if dto.Password != dto.ConfirmPassword {
+			return &response.Response{
+				Code:    response.ErrorAccountConfirmPassword,
+				Status:  response.StatusError,
+				Message: "don't match passwords",
+			}, nil
+		}
+
+		// Generate codes and strings
+		pwd_hash, err := pswd.HashPassword(dto.Password)
+		confirmCode := generate.RandomNumbers(6)
+		tokenSecret, err2 := generate.RandomStringBytes(32)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if err2 != nil {
+			return nil, err2
+		}
+
+		// Inserting in users
+		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, confirmCode, domain.ConfirmStatus_WAIT, tokenSecret}
+		id, err := repoAuth.InsertUser(ctx, args)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// If successfully, then we return the Response
+		if id > 0 {
+			row := repoAuth.GetUserToEmail(ctx, domain.UserDto{Id: id})
+
+			var user_id int
+			var confirmed_at time.Time
+			var email string
+
+			// Get above columns from row result
+			row.Scan(&user_id, &confirmed_at, &email)
+
+			return &response.Response{
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
+				Message: "Data is got",
+				Result: map[string]interface{}{
+					"user_id": user_id,
+				},
+				HttpCode: http.StatusCreated,
+			}, nil
+		} else {
+			return &response.Response{
+				Code:    response.ErrorAccountNotCreated,
+				Status:  response.StatusError,
+				Message: "failed, the user was not created",
+			}, nil
+		}
+	}
+
+	return &response.Response{
+		Code:    response.ErrorAccountExists,
+		Status:  response.StatusError,
+		Message: "user with this email address already exists",
+	}, nil
 }

@@ -8,17 +8,18 @@ import (
 type Status string
 
 const (
-	Success Status = "success"
-	Error          = "error"
-	Warning        = "warning"
+	StatusSuccess Status = "success"
+	StatusError          = "error"
+	StatusWarning        = "warning"
 )
 
 type Response struct {
-	Code    byte
-	Status  Status
-	Message string
-	Result  any
-	Cookies []*http.Cookie
+	Code     byte
+	Status   Status
+	Message  string
+	Result   any
+	Cookies  []*http.Cookie
+	HttpCode int
 }
 
 func (response *Response) CreateResponseData() []byte {

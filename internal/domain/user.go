@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"database/sql/driver"
+	"time"
+)
 
 type User struct {
 	Id             uint
@@ -12,11 +15,29 @@ type User struct {
 	TokenSecretKey string
 	ConfirmCode    string
 	ConfirmedAt    time.Time
-	ConfirmStatus  string
+	ConfirmStatus  ConfirmStatusEnum
 	UpdatedAt      time.Time
 	CreatedAt      time.Time
 }
 
 func (a *User) TableName() string {
 	return "users"
+}
+
+type ConfirmStatusEnum string
+
+const (
+	ConfirmStatus_QUEST ConfirmStatusEnum = "quest"
+	ConfirmStatus_WAIT                    = "waiting"
+	ConfirmStatus_ERROR                   = "error"
+	ConfirmStatus_OK                      = "success"
+)
+
+func (ge *ConfirmStatusEnum) Scan(value interface{}) error {
+	*ge = ConfirmStatusEnum(value.([]byte))
+	return nil
+}
+
+func (ge ConfirmStatusEnum) Value() (driver.Value, error) {
+	return string(ge), nil
 }
