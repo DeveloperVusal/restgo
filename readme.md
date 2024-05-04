@@ -6,6 +6,8 @@ For first, execute command:
 npm install
 ```
 
+So, after install you need to replace filename example.env to local.env and remove the prefix `EXAMPLE_`
+
 Next execute this command for run server:
 ```bash
 npm run serve
