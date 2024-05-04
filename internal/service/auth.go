@@ -4,15 +4,18 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"apibgo/internal/domain"
 	"apibgo/internal/repository"
 	"apibgo/internal/storage/pgsql"
+	"apibgo/internal/templates/mails"
 	"apibgo/internal/utils/auth/generate"
 	"apibgo/internal/utils/response"
 	"apibgo/pkg/auth/ajwt"
 	"apibgo/pkg/auth/pswd"
+	"apibgo/pkg/mail"
 )
 
 type Auths interface {
@@ -173,11 +176,29 @@ func (ar *AuthService) Registration(ctx context.Context, dto domain.Registration
 			row := repoAuth.GetUserToEmail(ctx, domain.UserDto{Id: id})
 
 			var user_id int
-			var confirmed_at time.Time
+			var confirmed_at string
 			var email string
 
 			// Get above columns from row result
-			row.Scan(&user_id, &confirmed_at, &email)
+			row.Scan(&user_id, &email, &confirmed_at)
+
+			// Prepare message for send to mailbox
+			// Get template message
+			subject, text := mails.Registration(map[string]string{
+				"confirmCode":  confirmCode,
+				"confirmed_at": confirmed_at,
+			})
+
+			// TODO: recommendation use RabbitMQ
+			smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+			m := mail.Mailer{
+				SmtpHost:     os.Getenv("SMTP_HOST"),
+				SmtpPort:     smtpPort,
+				SmtpUser:     os.Getenv("SMTP_USER"),
+				SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+			}
+			// Sends message to emails address
+			m.SendMail([]string{email}, subject, text)
 
 			return &response.Response{
 				Code:    response.ErrorEmpty,

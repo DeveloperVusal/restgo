@@ -71,7 +71,7 @@ func (ar *AuthRepo) InsertUser(ctx context.Context, args []interface{}) (int, er
 }
 
 func (ar *AuthRepo) GetUserToEmail(ctx context.Context, dto domain.UserDto) pgx.Row {
-	sql := `SELECT id, to_char(confirmed_at, 'DD-MM-YYYY HH24:MI:SS') AS confirmed_at, email FROM users WHERE id = $1 LIMIT 1`
+	sql := `SELECT id, email, to_char(confirmed_at, 'DD-MM-YYYY HH24:MI:SS') AS confirmed_time FROM users WHERE id = $1 LIMIT 1`
 	args := []interface{}{dto.Id}
 
 	return ar.db.QueryRow(ctx, sql, args...)
