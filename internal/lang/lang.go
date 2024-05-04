@@ -10,6 +10,12 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+func Locale() string {
+	lang := os.Getenv("APP_LANG")
+
+	return lang
+}
+
 func Get(lang string) (Lang, bool) {
 	appLang := mustLoad()
 	value, ok := appLang[lang]
