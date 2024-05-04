@@ -28,6 +28,7 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/redis/go-redis/v9 v9.2.1 // indirect
+	github.com/wneessen/go-mail v0.4.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
