@@ -3,6 +3,6 @@ mail:
     subject: 'Creating account - ${APP_NAME}'
     body: '<h2>Creating account</h2>
            <h3>Thank you very much, than connected to us!</h3>
-           <p>Please, confirm your account on ButaGo/p>
+           <p>Please, confirm your account on ButaGo</p>
            <h3><i>{{ confirmCode }}</i></h3>
            Your confirm code actual during 5 minutes from {{ confirmed_at }}'
