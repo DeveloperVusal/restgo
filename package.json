@@ -1,6 +1,6 @@
 {
   "name": "restgo",
-  "version": "0.0.56",
+  "version": "0.0.57",
   "scripts": {
     "serve": "nodemon --exec go run ./cmd/serve/main.go --ext go",
     "test": "echo \"Error: no test specified\" && exit 1",
