@@ -2,7 +2,10 @@ package response
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
+
+	aslog "apibgo/pkg/logger/feature/slog"
 )
 
 type Status string
@@ -40,4 +43,16 @@ func (response *Response) CreateResponseData() []byte {
 	})
 
 	return marshal
+}
+
+func (response *Response) SetCookies(w *http.ResponseWriter, log *slog.Logger) {
+	if len(response.Cookies) > 0 {
+		for _, _cookie := range response.Cookies {
+			if err := _cookie.Valid(); err != nil {
+				log.Warn("cookie invalid", aslog.Err(err))
+			} else {
+				http.SetCookie(*w, _cookie)
+			}
+		}
+	}
 }
