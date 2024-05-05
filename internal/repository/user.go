@@ -55,15 +55,21 @@ func (ar *UserRepo) DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, 
 	return ar.db.Exec(ctx, sql, id)
 }
 
-func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (int, error) {
+func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (domainUser.User, error) {
 	sql := `INSERT INTO users (email, password, name, surname, confirm_code, confirm_status, token_secret_key, confirmed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()::timestamp, NOW()::timestamp) RETURNING id;`
 	id := 0
 
 	err := ar.db.QueryRow(ctx, sql, args...).Scan(&id)
 
 	if err != nil {
-		return 0, err
+		return domainUser.User{}, err
 	}
 
-	return id, nil
+	user, err := ar.GetUserData(ctx, domainAuth.UserDto{Id: id})
+
+	if err != nil {
+		return domainUser.User{}, err
+	}
+
+	return user, nil
 }

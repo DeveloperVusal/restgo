@@ -199,15 +199,15 @@ func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.Registra
 
 		// Inserting in users
 		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, confirmCode, domainUser.ConfirmStatus_WAIT, tokenSecret}
-		id, err := repoUser.InsertUser(ctx, args)
+		user, err := repoUser.InsertUser(ctx, args)
 
 		if err != nil {
 			return nil, err
 		}
 
 		// If successfully, then we return the Response
-		if id > 0 {
-			row := repoAuth.GetUserToEmail(ctx, domainAuth.UserDto{Id: id})
+		if user.Id > 0 {
+			row := repoAuth.GetUserToEmail(ctx, domainAuth.UserDto{Id: int(user.Id)})
 
 			var user_id int
 			var confirmed_at string
