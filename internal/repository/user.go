@@ -3,7 +3,8 @@ package repository
 import (
 	"context"
 
-	"apibgo/internal/domain"
+	domainAuth "apibgo/internal/domain/auth"
+	domainUser "apibgo/internal/domain/user"
 	"apibgo/internal/storage/pgsql"
 
 	"github.com/jackc/pgx/v5"
@@ -14,7 +15,7 @@ type UserRI interface {
 	InsertUser(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 	UpdateUser(ctx context.Context, id int, args []interface{}) (pgconn.CommandTag, error)
 	DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, error)
-	GetUserData(ctx context.Context, dto domain.UserDto) pgx.Row
+	GetUserData(ctx context.Context, dto domainAuth.UserDto) pgx.Row
 }
 
 type UserRepo struct {
@@ -29,20 +30,20 @@ func NewUserRepo(store *pgsql.Storage) *UserRepo {
 	}
 }
 
-func (ar *UserRepo) GetUserData(ctx context.Context, dto domain.UserDto) (domain.User, error) {
+func (ar *UserRepo) GetUserData(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error) {
 	sql := `SELECT * FROM users WHERE email = $1 or id = $2 LIMIT 1`
 	args := []interface{}{dto.Email, dto.Id}
 
 	rows, err := ar.db.Query(ctx, sql, args...)
 
 	if err != nil {
-		return domain.User{}, err
+		return domainUser.User{}, err
 	}
 
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domainUser.User])
 
 	if err != nil {
-		return domain.User{}, err
+		return domainUser.User{}, err
 	}
 
 	return user, nil

@@ -1,15 +1,16 @@
 package pgsql
 
 import (
-	"apibgo/internal/domain"
-	"apibgo/internal/storage"
-	"apibgo/pkg/db/pgsql"
 	"context"
 	"fmt"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
+
+	domainAuth "apibgo/internal/domain/auth"
+	"apibgo/internal/storage"
+	"apibgo/pkg/db/pgsql"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/golang-migrate/migrate/v4"
@@ -80,7 +81,7 @@ func New(cfg *storage.Config, conn string) (*Storage, error) {
 	return &Storage{Db: db}, nil
 }
 
-func (s *Storage) Create(ctx context.Context, au domain.Auth) (pgconn.CommandTag, error) {
+func (s *Storage) Create(ctx context.Context, au domainAuth.Auth) (pgconn.CommandTag, error) {
 	ds := goqu.Insert(au.TableName()).Rows(au)
 	sql, args, _ := ds.ToSQL()
 	cmmtag, err := s.Db.Exec(ctx, sql, args...)
@@ -88,7 +89,7 @@ func (s *Storage) Create(ctx context.Context, au domain.Auth) (pgconn.CommandTag
 	return cmmtag, err
 }
 
-func (s *Storage) Save(ctx context.Context, au domain.Auth, sql string, args ...interface{}) (pgconn.CommandTag, error) {
+func (s *Storage) Save(ctx context.Context, au domainAuth.Auth, sql string, args ...interface{}) (pgconn.CommandTag, error) {
 	ds := goqu.Update(au.TableName()).Set(au).Where(goqu.L(sql, args...))
 	_sql, _args, _ := ds.ToSQL()
 	cmmtag, err := s.Db.Exec(ctx, _sql, _args...)
@@ -97,7 +98,7 @@ func (s *Storage) Save(ctx context.Context, au domain.Auth, sql string, args ...
 }
 
 func (s *Storage) Delete(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	au := domain.Auth{}
+	au := domainAuth.Auth{}
 	ds := goqu.Delete(au.TableName()).Where(goqu.L(sql, args...))
 	_sql, _args, _ := ds.ToSQL()
 	cmmtag, err := s.Db.Exec(ctx, _sql, _args...)

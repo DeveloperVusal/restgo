@@ -8,7 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"apibgo/internal/domain"
+	domainAuth "apibgo/internal/domain/auth"
+	domainUser "apibgo/internal/domain/user"
 	"apibgo/internal/repository"
 	"apibgo/internal/storage/pgsql"
 	"apibgo/internal/templates/mails"
@@ -21,8 +22,8 @@ import (
 )
 
 type Auths interface {
-	Login(ctx context.Context, dto domain.LoginDto) (*response.Response, error)
-	Registration(ctx context.Context, dto domain.RegistrationDto) (*response.Response, error)
+	Login(ctx context.Context, dto domainAuth.LoginDto) (*response.Response, error)
+	Registration(ctx context.Context, dto domainAuth.RegistrationDto) (*response.Response, error)
 	Activation(ctx context.Context)
 	Logout(ctx context.Context)
 	Recover(ctx context.Context)
@@ -42,11 +43,12 @@ func NewAuthService(store *pgsql.Storage) *AuthService {
 
 }
 
-func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*response.Response, error) {
+func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
 	repoAuth := repository.NewAuthRepo(ar.db)
-	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
+	row := repoAuth.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	dto.Device = strings.ToLower(device.DetectDevice(dto.UserAgent))
 
 	var user_id int
 	var user_password string
@@ -115,7 +117,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*respons
 			})
 
 			// Prepare message for send to mailbox
-			user, err := repoUser.GetUserData(ctx, domain.UserDto{Id: user_id})
+			user, err := repoUser.GetUserData(ctx, domainAuth.UserDto{Id: user_id})
 
 			if err != nil {
 				return nil, err
@@ -130,15 +132,17 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*respons
 			})
 
 			// TODO: recommendation use RabbitMQ
-			smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-			m := mail.Mailer{
-				SmtpHost:     os.Getenv("SMTP_HOST"),
-				SmtpPort:     smtpPort,
-				SmtpUser:     os.Getenv("SMTP_USER"),
-				SmtpPassword: os.Getenv("SMTP_PASSWORD"),
-			}
-			// Sends message to emails address
-			m.SendMail([]string{user.Email}, subject, text)
+			go func() {
+				smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+				m := mail.Mailer{
+					SmtpHost:     os.Getenv("SMTP_HOST"),
+					SmtpPort:     smtpPort,
+					SmtpUser:     os.Getenv("SMTP_USER"),
+					SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+				}
+				// Sends message to emails address
+				m.SendMail([]string{user.Email}, subject, text)
+			}()
 
 			return &response.Response{
 				Code:    response.ErrorEmpty,
@@ -156,11 +160,11 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*respons
 	return nil, nil
 }
 
-func (ar *AuthService) Registration(ctx context.Context, dto domain.RegistrationDto) (*response.Response, error) {
+func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.RegistrationDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
 	repoAuth := repository.NewAuthRepo(ar.db)
-	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
+	row := repoAuth.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
 
 	var user_id int
 	var user_password string
@@ -194,7 +198,7 @@ func (ar *AuthService) Registration(ctx context.Context, dto domain.Registration
 		}
 
 		// Inserting in users
-		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, confirmCode, domain.ConfirmStatus_WAIT, tokenSecret}
+		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, confirmCode, domainUser.ConfirmStatus_WAIT, tokenSecret}
 		id, err := repoUser.InsertUser(ctx, args)
 
 		if err != nil {
@@ -203,7 +207,7 @@ func (ar *AuthService) Registration(ctx context.Context, dto domain.Registration
 
 		// If successfully, then we return the Response
 		if id > 0 {
-			row := repoAuth.GetUserToEmail(ctx, domain.UserDto{Id: id})
+			row := repoAuth.GetUserToEmail(ctx, domainAuth.UserDto{Id: id})
 
 			var user_id int
 			var confirmed_at string
@@ -220,15 +224,17 @@ func (ar *AuthService) Registration(ctx context.Context, dto domain.Registration
 			})
 
 			// TODO: recommendation use RabbitMQ
-			smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-			m := mail.Mailer{
-				SmtpHost:     os.Getenv("SMTP_HOST"),
-				SmtpPort:     smtpPort,
-				SmtpUser:     os.Getenv("SMTP_USER"),
-				SmtpPassword: os.Getenv("SMTP_PASSWORD"),
-			}
-			// Sends message to emails address
-			m.SendMail([]string{email}, subject, text)
+			go func() {
+				smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+				m := mail.Mailer{
+					SmtpHost:     os.Getenv("SMTP_HOST"),
+					SmtpPort:     smtpPort,
+					SmtpUser:     os.Getenv("SMTP_USER"),
+					SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+				}
+				// Sends message to emails address
+				m.SendMail([]string{email}, subject, text)
+			}()
 
 			return &response.Response{
 				Code:    response.ErrorEmpty,

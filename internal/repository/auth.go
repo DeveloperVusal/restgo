@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"apibgo/internal/domain"
+	domainAuth "apibgo/internal/domain/auth"
 	"apibgo/internal/storage/pgsql"
 
 	"github.com/jackc/pgx/v5"
@@ -11,9 +11,9 @@ import (
 )
 
 type AuthRI interface {
-	GetUser(ctx context.Context, dto domain.UserDto) pgx.Row
-	GetUserToEmail(ctx context.Context, dto domain.UserDto) pgx.Row
-	GetAuth(ctx context.Context, dto domain.LoginDto) pgx.Row
+	GetUser(ctx context.Context, dto domainAuth.UserDto) pgx.Row
+	GetUserToEmail(ctx context.Context, dto domainAuth.UserDto) pgx.Row
+	GetAuth(ctx context.Context, dto domainAuth.LoginDto) pgx.Row
 	DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error)
 	InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 }
@@ -30,14 +30,14 @@ func NewAuthRepo(store *pgsql.Storage) *AuthRepo {
 	}
 }
 
-func (ar *AuthRepo) GetUser(ctx context.Context, dto domain.UserDto) pgx.Row {
+func (ar *AuthRepo) GetUser(ctx context.Context, dto domainAuth.UserDto) pgx.Row {
 	sql := `SELECT id, password, activation FROM users WHERE email = $1 LIMIT 1`
 	args := []interface{}{dto.Email}
 
 	return ar.db.QueryRow(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) GetAuth(ctx context.Context, dto domain.LoginDto) pgx.Row {
+func (ar *AuthRepo) GetAuth(ctx context.Context, dto domainAuth.LoginDto) pgx.Row {
 	sql := `SELECT id FROM auths WHERE user_agent = $1 AND ip = $2 AND device = $3 LIMIT 1`
 	args := []interface{}{dto.UserAgent, dto.Ip, dto.Device}
 
@@ -56,7 +56,7 @@ func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgconn.
 	return ar.db.Exec(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) GetUserToEmail(ctx context.Context, dto domain.UserDto) pgx.Row {
+func (ar *AuthRepo) GetUserToEmail(ctx context.Context, dto domainAuth.UserDto) pgx.Row {
 	sql := `SELECT id, email, to_char(confirmed_at, 'DD-MM-YYYY HH24:MI:SS') AS confirmed_time FROM users WHERE id = $1 LIMIT 1`
 	args := []interface{}{dto.Id}
 

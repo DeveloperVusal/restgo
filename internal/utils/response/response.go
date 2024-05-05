@@ -17,7 +17,7 @@ type Response struct {
 	Code     byte
 	Status   Status
 	Message  string
-	Result   any
+	Result   interface{}
 	Cookies  []*http.Cookie
 	HttpCode int
 }

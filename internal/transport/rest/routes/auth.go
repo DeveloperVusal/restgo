@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"apibgo/internal/config"
-	"apibgo/internal/domain"
+	domainAuth "apibgo/internal/domain/auth"
 	"apibgo/internal/service"
 	"apibgo/internal/storage"
 	"apibgo/internal/storage/pgsql"
@@ -38,7 +38,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		authService := service.NewAuthService(pg)
 		b, _ := io.ReadAll(r.Body)
-		dto := domain.LoginDto{}
+		dto := domainAuth.LoginDto{}
 		_ = json.Unmarshal(b, &dto)
 
 		dto.Ip = utils.RealIp(r)
@@ -69,7 +69,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		authService := service.NewAuthService(pg)
 		b, _ := io.ReadAll(r.Body)
-		dto := domain.RegistrationDto{}
+		dto := domainAuth.RegistrationDto{}
 		_ = json.Unmarshal(b, &dto)
 
 		response, err := authService.Registration(context.Background(), dto)
