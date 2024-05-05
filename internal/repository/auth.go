@@ -44,10 +44,10 @@ func (ar *AuthRepo) GetAuth(ctx context.Context, dto domainAuth.LoginDto) pgx.Ro
 	return ar.db.QueryRow(ctx, sql, args...)
 }
 
-func (ar *AuthRepo) DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error) {
-	sql := `DELETE FROM auths WHERE id = $1`
+func (ar *AuthRepo) DeleteAuth(ctx context.Context, dto domainAuth.LogoutDto) (pgconn.CommandTag, error) {
+	sql := `DELETE FROM auths WHERE access_token = $1 OR id = $2`
 
-	return ar.db.Exec(ctx, sql, id)
+	return ar.db.Exec(ctx, sql, dto.Token, dto.Id)
 }
 
 func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error) {

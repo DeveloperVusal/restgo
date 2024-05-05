@@ -25,7 +25,7 @@ type Auths interface {
 	Login(ctx context.Context, dto domainAuth.LoginDto) (*response.Response, error)
 	Registration(ctx context.Context, dto domainAuth.RegistrationDto) (*response.Response, error)
 	Activation(ctx context.Context)
-	Logout(ctx context.Context)
+	Logout(ctx context.Context) (*response.Response, error)
 	Recover(ctx context.Context)
 	VerifyToken(ctx context.Context)
 	Refresh(ctx context.Context)
@@ -78,7 +78,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*res
 
 		// If exists, then we delete the record
 		if auth_id > 0 {
-			cmdtag, err := repoAuth.DeleteAuth(ctx, auth_id)
+			cmdtag, err := repoAuth.DeleteAuth(ctx, domainAuth.LogoutDto{Id: auth_id})
 
 			if err != nil {
 				return nil, err
@@ -259,4 +259,46 @@ func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.Registra
 		Status:  response.StatusError,
 		Message: "user with this email address already exists",
 	}, nil
+}
+
+func (ar *AuthService) Logout(ctx context.Context, header_auth []string) (*response.Response, error) {
+	// Parse header Authorization and get token
+	split := strings.Split(header_auth[0], " ")
+	token := split[1]
+
+	// Checking on correct JWT
+	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+		return nil, err
+	}
+
+	// Deleting session
+	repoAuth := repository.NewAuthRepo(ar.db)
+	cmdtag, err := repoAuth.DeleteAuth(ctx, domainAuth.LogoutDto{Token: token})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// If whole successfully, then resets refresh token
+	if cmdtag.RowsAffected() <= 0 {
+		return nil, err
+	} else {
+		var _cookies []*http.Cookie
+
+		_cookies = append(_cookies, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    "empty",
+			Path:     "/",
+			MaxAge:   -1,
+			HttpOnly: true,
+		})
+
+		return &response.Response{
+			Code:    response.ErrorEmpty,
+			Status:  response.StatusSuccess,
+			Message: "Session successfully destroyed",
+			Result:  nil,
+			Cookies: _cookies,
+		}, nil
+	}
 }

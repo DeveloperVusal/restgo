@@ -51,6 +51,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 			return
 		}
 
+		response.SetCookies(&w, log)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodPost)
@@ -87,4 +88,36 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		w.Write(response.CreateResponseData())
 		w.WriteHeader(response.HttpCode)
 	}).Methods(http.MethodPost)
+
+	// route: /auth/logout/
+	r.HandleFunc("/auth/logout/", func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Header["Authorization"]; !ok {
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		log := logger.Setup(a.Config.Env)
+		pg, err := pgsql.New(a.Storage, "master")
+
+		if err != nil {
+			log.Error("failed to init storage", slog.Err(err))
+			return
+		}
+
+		log.Info("starting database")
+
+		authService := service.NewAuthService(pg)
+		response, err := authService.Logout(context.Background(), r.Header["Authorization"])
+
+		if err != nil {
+			log.Error("failed to execute Logout service", slog.Err(err))
+			return
+		}
+
+		response.SetCookies(&w, log)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+	}).Methods(http.MethodPost)
+
 }

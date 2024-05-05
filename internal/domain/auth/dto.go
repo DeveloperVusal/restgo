@@ -13,6 +13,11 @@ type LoginDto struct {
 	UserAgent string
 }
 
+type LogoutDto struct {
+	Id    int
+	Token string
+}
+
 type RegistrationDto struct {
 	Email           string `json:"email" validate:"required,email"`
 	Password        string `json:"password" validate:"required"`
