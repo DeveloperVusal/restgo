@@ -1,6 +1,7 @@
 package ajwt
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -53,4 +54,26 @@ func (j *JWT) NewPairTokens() (string, string) {
 	refresh, _ := initToken.SignedString(signedKey)
 
 	return access, refresh
+}
+
+func IsJWT(tokenString string, secretKey string) error {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(secretKey), nil
+
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if !token.Valid {
+		return fmt.Errorf("invalid token")
+	}
+
+	return nil
 }
