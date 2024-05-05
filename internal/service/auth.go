@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"apibgo/internal/domain"
@@ -14,6 +15,7 @@ import (
 	"apibgo/internal/utils/auth/generate"
 	"apibgo/internal/utils/response"
 	"apibgo/pkg/auth/ajwt"
+	"apibgo/pkg/auth/device"
 	"apibgo/pkg/auth/pswd"
 	"apibgo/pkg/mail"
 )
@@ -42,6 +44,7 @@ func NewAuthService(store *pgsql.Storage) *AuthService {
 
 func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*response.Response, error) {
 	// Trying find a user in the users table
+	repoUser := repository.NewUserRepo(ar.db)
 	repoAuth := repository.NewAuthRepo(ar.db)
 	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
 
@@ -111,6 +114,32 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*respons
 				Expires:  time.Now().AddDate(0, 1, 0),
 			})
 
+			// Prepare message for send to mailbox
+			user, err := repoUser.GetUserData(ctx, domain.UserDto{Id: user_id})
+
+			if err != nil {
+				return nil, err
+			}
+
+			// Get template message
+			subject, text := mails.Login(map[string]string{
+				"email":         user.Email,
+				"device":        device.DetectDevice(dto.UserAgent),
+				"device_detail": strings.Join([]string{device.DetectOS(dto.UserAgent), device.DetectBrowser(dto.UserAgent), dto.Ip}, ","),
+				"time":          time.Now().Format("02 Jan, 15:04"),
+			})
+
+			// TODO: recommendation use RabbitMQ
+			smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+			m := mail.Mailer{
+				SmtpHost:     os.Getenv("SMTP_HOST"),
+				SmtpPort:     smtpPort,
+				SmtpUser:     os.Getenv("SMTP_USER"),
+				SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+			}
+			// Sends message to emails address
+			m.SendMail([]string{user.Email}, subject, text)
+
 			return &response.Response{
 				Code:    response.ErrorEmpty,
 				Status:  response.StatusSuccess,
@@ -129,6 +158,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domain.LoginDto) (*respons
 
 func (ar *AuthService) Registration(ctx context.Context, dto domain.RegistrationDto) (*response.Response, error) {
 	// Trying find a user in the users table
+	repoUser := repository.NewUserRepo(ar.db)
 	repoAuth := repository.NewAuthRepo(ar.db)
 	row := repoAuth.GetUser(ctx, domain.UserDto{Email: dto.Email})
 
@@ -165,7 +195,7 @@ func (ar *AuthService) Registration(ctx context.Context, dto domain.Registration
 
 		// Inserting in users
 		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, confirmCode, domain.ConfirmStatus_WAIT, tokenSecret}
-		id, err := repoAuth.InsertUser(ctx, args)
+		id, err := repoUser.InsertUser(ctx, args)
 
 		if err != nil {
 			return nil, err

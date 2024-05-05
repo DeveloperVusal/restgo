@@ -6,3 +6,19 @@ mail:
            <p>Please, confirm your account on ButaGo</p>
            <h3><i>{{ confirmCode }}</i></h3>
            Your confirm code actual during 5 minutes from {{ confirmed_at }}'
+  login:
+    subject: 'Security Notification - ${APP_NAME}'
+    body: >
+      <h2>Logins into account on a {{ device }} device</h2>
+      <p>A new device a <b>{{ email }}</b> logged into your account.</p>
+      <p>If you didn't do it, then change to password, that safe your account.</p>
+      <table>
+        <tr>
+          <td width="90px" style="color: #999">Time</td>
+          <td>{{ time }}</td>
+        </tr>
+        <tr>
+          <td width="90px" style="color: #999">Device detail</td>
+          <td>{{ device_detail }}</td>
+        </tr>
+      </table>

@@ -16,7 +16,6 @@ type AuthRI interface {
 	GetAuth(ctx context.Context, dto domain.LoginDto) pgx.Row
 	DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error)
 	InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
-	InsertUser(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 }
 
 type AuthRepo struct {
@@ -55,19 +54,6 @@ func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgconn.
 	sql := `INSERT INTO auths (user_id, access_token, refresh_token, ip, device, user_agent, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()::timestamp)`
 
 	return ar.db.Exec(ctx, sql, args...)
-}
-
-func (ar *AuthRepo) InsertUser(ctx context.Context, args []interface{}) (int, error) {
-	sql := `INSERT INTO users (email, password, name, surname, confirm_code, confirm_status, token_secret_key, confirmed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()::timestamp, NOW()::timestamp) RETURNING id;`
-	id := 0
-
-	err := ar.db.QueryRow(ctx, sql, args...).Scan(&id)
-
-	if err != nil {
-		return 0, err
-	}
-
-	return id, nil
 }
 
 func (ar *AuthRepo) GetUserToEmail(ctx context.Context, dto domain.UserDto) pgx.Row {

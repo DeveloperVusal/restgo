@@ -1,23 +1,25 @@
 package domain
 
 import (
+	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"time"
 )
 
 type User struct {
-	Id             uint
-	Email          string
-	Password       string
-	Activation     bool
-	Name           string
-	Surname        string
-	TokenSecretKey string
-	ConfirmCode    string
-	ConfirmedAt    time.Time
-	ConfirmStatus  ConfirmStatusEnum
-	UpdatedAt      time.Time
-	CreatedAt      time.Time
+	Id             uint              `db:"id"`
+	Email          string            `db:"email"`
+	Password       string            `db:"password"`
+	Activation     bool              `db:"activation"`
+	Name           string            `db:"name"`
+	Surname        string            `db:"surname"`
+	TokenSecretKey string            `db:"token_secret_key,omitempty"`
+	ConfirmCode    string            `db:"confirm_code,omitempty"`
+	ConfirmedAt    sql.NullTime      `db:"confirmed_at,omitempty"`
+	ConfirmStatus  ConfirmStatusEnum `db:"confirm_status,omitempty"`
+	UpdatedAt      sql.NullTime      `db:"updated_at,omitempty"`
+	CreatedAt      time.Time         `db:"created_at"`
 }
 
 func (a *User) TableName() string {
@@ -34,7 +36,23 @@ const (
 )
 
 func (ge *ConfirmStatusEnum) Scan(value interface{}) error {
-	*ge = ConfirmStatusEnum(value.([]byte))
+	switch v := value.(type) {
+	case string:
+		switch string(v) {
+		case "quest":
+			*ge = ConfirmStatus_QUEST
+		case "waiting":
+			*ge = ConfirmStatus_WAIT
+		case "error":
+			*ge = ConfirmStatus_ERROR
+		case "success":
+			*ge = ConfirmStatus_OK
+		default:
+			return fmt.Errorf("unknown ConfirmStatusEnum value: %s", v)
+		}
+	default:
+		return fmt.Errorf("unexpected type for ConfirmStatusEnum: %T", value)
+	}
 	return nil
 }
 
