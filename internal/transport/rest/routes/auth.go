@@ -158,4 +158,38 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodGet)
+
+	// route: /auth/verify/
+	r.HandleFunc("/auth/verify/", func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Setup(a.Config.Env)
+
+		if _, ok := r.Header["Authorization"]; !ok {
+			log.Error("failed to get header of the Authorization")
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		pg, err := pgsql.New(a.Storage, "master")
+
+		if err != nil {
+			log.Error("failed to init storage", slog.Err(err))
+			return
+		}
+
+		log.Info("starting database")
+
+		authService := service.NewAuthService(pg)
+		isVerify, err := authService.VerifyToken(context.Background(), r.Header["Authorization"])
+
+		if err != nil {
+			log.Error("failed to execute VerifyToken service", slog.Err(err))
+		}
+
+		if !isVerify {
+			w.WriteHeader(http.StatusUnauthorized)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}).Methods(http.MethodGet)
 }

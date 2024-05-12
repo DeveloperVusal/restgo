@@ -393,3 +393,16 @@ func (ar *AuthService) Refresh(ctx context.Context, tokenCookie *http.Cookie, dt
 		}
 	}
 }
+
+func (ar *AuthService) VerifyToken(ctx context.Context, header_auth []string) (bool, error) {
+	// Parse header Authorization and get token
+	split := strings.Split(header_auth[0], " ")
+	token := split[1]
+
+	// Checking on correct JWT
+	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
