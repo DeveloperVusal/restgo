@@ -192,4 +192,37 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		w.WriteHeader(http.StatusOK)
 	}).Methods(http.MethodGet)
+
+	// route: /auth/activation/
+	r.HandleFunc("/auth/activation/", func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Setup(a.Config.Env)
+		pg, err := pgsql.New(a.Storage, "master")
+
+		if err != nil {
+			log.Error("failed to init storage", slog.Err(err))
+			return
+		}
+
+		log.Info("starting database")
+
+		authService := service.NewAuthService(pg)
+		b, _ := io.ReadAll(r.Body)
+		dto := domainAuth.ActivationDto{}
+		_ = json.Unmarshal(b, &dto)
+
+		response, err := authService.Activation(context.Background(), dto)
+
+		if err != nil {
+			log.Error("failed to execute Logout service", slog.Err(err))
+			return
+		} else {
+			if response == nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+	}).Methods(http.MethodPost)
 }

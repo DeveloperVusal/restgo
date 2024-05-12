@@ -22,3 +22,6 @@ mail:
           <td>{{ device_detail }}</td>
         </tr>
       </table>
+  activation:
+    subject: 'Confirm account - ${APP_NAME}'
+    body: '<center><h2>Your account successfully confirmed</h2></center>'

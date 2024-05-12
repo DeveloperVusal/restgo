@@ -11,4 +11,10 @@ const (
 	ErrorAccountExists = 3
 	// When don't creating a user account
 	ErrorAccountNotCreated = 4
+	// When a user account already activated
+	ErrorAccountAlreadyActivate = 5
+	// When time activation out
+	ErrorAccountActivateTimeout = 6
+	// When don't match of confirm code
+	ErrorAccountInvalidCode = 6
 )

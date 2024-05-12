@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -26,7 +28,7 @@ import (
 type Auths interface {
 	Login(ctx context.Context, dto domainAuth.LoginDto) (*response.Response, error)
 	Registration(ctx context.Context, dto domainAuth.RegistrationDto) (*response.Response, error)
-	// Activation(ctx context.Context)
+	Activation(ctx context.Context, dto domainAuth.ActivationDto) (*response.Response, error)
 	Logout(ctx context.Context, header_auth []string) (*response.Response, error)
 	// Recover(ctx context.Context)
 	VerifyToken(ctx context.Context, header_auth []string) (bool, error)
@@ -234,6 +236,9 @@ func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.Registra
 				m.SendMail([]string{user.Email}, subject, text)
 			}()
 
+			// generate key for activation
+			key := ar.generateToken(user.TokenSecretKey, user.Email)
+
 			tx.Commit(ctx)
 
 			return &response.Response{
@@ -241,7 +246,8 @@ func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.Registra
 				Status:  response.StatusSuccess,
 				Message: "Data is got",
 				Result: map[string]interface{}{
-					"user_id": user.Id,
+					"email": user.Email,
+					"key":   key,
 				},
 				HttpCode: http.StatusCreated,
 			}, nil
@@ -405,4 +411,123 @@ func (ar *AuthService) VerifyToken(ctx context.Context, header_auth []string) (b
 	}
 
 	return true, nil
+}
+
+func (ar *AuthService) Activation(ctx context.Context, dto domainAuth.ActivationDto) (*response.Response, error) {
+	// Trying find a user in the users table
+	repoUser := repository.NewUserRepo(ar.db)
+	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+
+	if err != nil {
+		return nil, err
+	}
+
+	// If valid data
+	if user.Id > 0 && ar.checkToken(user.TokenSecretKey, dto.Email, dto.Key) {
+		// If a user activated
+		if user.Activation {
+			return &response.Response{
+				Code:    response.ErrorAccountAlreadyActivate,
+				Status:  response.StatusError,
+				Message: "account already activated",
+			}, nil
+		}
+
+		// if confirmed_at valid
+		if user.ConfirmedAt.Valid {
+			confirmExpired := time.Now().Unix() - user.ConfirmedAt.Time.Unix()
+			limitExprTime, _ := strconv.ParseInt(os.Getenv("APP_CONFIRM_TIME"), 10, 64)
+
+			// if it hasn't been 5 minutes
+			if confirmExpired < limitExprTime {
+				// if don't match of confirm codes
+				if strconv.Itoa(dto.Code) != user.ConfirmCode.String {
+					return &response.Response{
+						Code:    response.ErrorAccountInvalidCode,
+						Status:  response.StatusError,
+						Message: "don't match of confirm code",
+					}, nil
+				}
+
+				// Begin transaction
+				tx, err := ar.db.Db.BeginTx(ctx, pgx.TxOptions{})
+
+				if err != nil {
+					return nil, err
+				}
+
+				defer func() {
+					if err != nil {
+						tx.Rollback(ctx)
+					}
+				}()
+
+				// Activating account
+				cmdtag, err := repoUser.UpdateUser(ctx, int(user.Id), &domainUser.User{
+					Activation: true,
+				})
+
+				if err != nil {
+					tx.Rollback(ctx)
+
+					return nil, err
+				}
+
+				if cmdtag.RowsAffected() <= 0 {
+					tx.Rollback(ctx)
+
+					return nil, err
+				} else {
+					tx.Commit(ctx)
+
+					// Prepare message for send to mailbox
+					// Get template message
+					subject, text := mails.Activation(map[string]string{})
+
+					// TODO: recommendation use RabbitMQ
+					go func() {
+						smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+						m := mail.Mailer{
+							SmtpHost:     os.Getenv("SMTP_HOST"),
+							SmtpPort:     smtpPort,
+							SmtpUser:     os.Getenv("SMTP_USER"),
+							SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+						}
+						// Sends message to emails address
+						m.SendMail([]string{user.Email}, subject, text)
+					}()
+
+					return &response.Response{
+						Code:    response.ErrorEmpty,
+						Status:  response.StatusSuccess,
+						Message: "your account successfully activated",
+					}, nil
+				}
+			} else {
+				return &response.Response{
+					Code:    response.ErrorAccountActivateTimeout,
+					Status:  response.StatusError,
+					Message: "this confirm code time out",
+				}, nil
+			}
+		}
+	}
+
+	return nil, nil
+}
+
+func (ar *AuthService) generateToken(secret string, email string) string {
+	h := sha256.New()
+	h.Write([]byte(secret + `::` + email))
+	bs := h.Sum(nil)
+
+	return fmt.Sprintf("%x", bs)
+}
+
+func (ar *AuthService) checkToken(secret string, email string, token string) bool {
+	h := sha256.New()
+	h.Write([]byte(secret + `::` + email))
+	bs := h.Sum(nil)
+
+	return fmt.Sprintf("%x", bs) == token
 }

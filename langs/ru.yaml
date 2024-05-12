@@ -21,3 +21,6 @@ mail:
                 <td>{{ device_detail }}</td>
               </tr>
            </table>'
+  activation:
+    subject: 'Подтверждение аккаунта - ${APP_NAME}'
+    body: '<center><h2>Ваш аккаунт успешно подтвержден</h2></center>'

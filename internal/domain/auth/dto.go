@@ -32,3 +32,9 @@ type RefreshDto struct {
 	Ip        string
 	UserAgent string
 }
+
+type ActivationDto struct {
+	Email string `json:"email" validate:"required,email"`
+	Key   string `json:"key" validate:"required,sha256"`
+	Code  int    `json:"code" validate:"required,numeric"`
+}
