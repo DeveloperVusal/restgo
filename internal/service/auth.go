@@ -29,7 +29,7 @@ type Auths interface {
 	// Activation(ctx context.Context)
 	Logout(ctx context.Context, header_auth []string) (*response.Response, error)
 	// Recover(ctx context.Context)
-	// VerifyToken(ctx context.Context)
+	VerifyToken(ctx context.Context, header_auth []string) (bool, error)
 	Refresh(ctx context.Context, tokenCookie *http.Cookie, dto domainAuth.LoginDto)
 	// RecoverPasswordCheckToken(ctx context.Context)
 }
