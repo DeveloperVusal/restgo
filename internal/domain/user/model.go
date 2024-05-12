@@ -12,10 +12,10 @@ type User struct {
 	Email          string            `db:"email"`
 	Password       string            `db:"password"`
 	Activation     bool              `db:"activation"`
-	Name           string            `db:"name"`
-	Surname        string            `db:"surname"`
+	Name           sql.NullString    `db:"name"`
+	Surname        sql.NullString    `db:"surname"`
 	TokenSecretKey string            `db:"token_secret_key,omitempty"`
-	ConfirmCode    string            `db:"confirm_code,omitempty"`
+	ConfirmCode    sql.NullString    `db:"confirm_code,omitempty"`
 	ConfirmedAt    sql.NullTime      `db:"confirmed_at,omitempty"`
 	ConfirmStatus  ConfirmStatusEnum `db:"confirm_status,omitempty"`
 	UpdatedAt      sql.NullTime      `db:"updated_at,omitempty"`
@@ -29,10 +29,11 @@ func (a *User) TableName() string {
 type ConfirmStatusEnum string
 
 const (
-	ConfirmStatus_QUEST ConfirmStatusEnum = "quest"
-	ConfirmStatus_WAIT                    = "waiting"
-	ConfirmStatus_ERROR                   = "error"
-	ConfirmStatus_OK                      = "success"
+	ConfirmStatus_QUEST   ConfirmStatusEnum = "quest"
+	ConfirmStatus_WAIT                      = "waiting"
+	ConfirmStatus_ERROR                     = "error"
+	ConfirmStatus_OK                        = "success"
+	ConfirmStatus_UNKNOWN                   = "unknown"
 )
 
 func (ge *ConfirmStatusEnum) Scan(value interface{}) error {
@@ -48,7 +49,7 @@ func (ge *ConfirmStatusEnum) Scan(value interface{}) error {
 		case "success":
 			*ge = ConfirmStatus_OK
 		default:
-			return fmt.Errorf("unknown ConfirmStatusEnum value: %s", v)
+			*ge = ConfirmStatus_UNKNOWN
 		}
 	default:
 		return fmt.Errorf("unexpected type for ConfirmStatusEnum: %T", value)

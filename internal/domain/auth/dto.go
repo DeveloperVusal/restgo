@@ -13,7 +13,7 @@ type LoginDto struct {
 	UserAgent string
 }
 
-type LogoutDto struct {
+type DestroyDto struct {
 	Id    int
 	Token string
 }
@@ -24,4 +24,11 @@ type RegistrationDto struct {
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 	Name            string `json:"name" validate:"required,alphaunicode"`
 	Surname         string `json:"surname" validate:"required,alphaunicode"`
+}
+
+type RefreshDto struct {
+	Refresh   string
+	Device    string
+	Ip        string
+	UserAgent string
 }

@@ -120,4 +120,42 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
+	// route: /auth/refresh/
+	r.HandleFunc("/auth/refresh/", func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Setup(a.Config.Env)
+		cookie, err := r.Cookie("refresh_token")
+
+		if err != nil {
+			log.Error("failed to get cookie", slog.Err(err))
+			w.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		pg, err := pgsql.New(a.Storage, "master")
+
+		if err != nil {
+			log.Error("failed to init storage", slog.Err(err))
+			return
+		}
+
+		log.Info("starting database")
+
+		dto := domainAuth.LoginDto{
+			Ip:        utils.RealIp(r),
+			UserAgent: r.UserAgent(),
+		}
+
+		authService := service.NewAuthService(pg)
+		response, err := authService.Refresh(context.Background(), cookie, dto)
+
+		if err != nil {
+			log.Error("failed to execute Refresh service", slog.Err(err))
+			return
+		}
+
+		response.SetCookies(&w, log)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+	}).Methods(http.MethodGet)
 }

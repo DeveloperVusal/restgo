@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	domainAuth "apibgo/internal/domain/auth"
 	domainUser "apibgo/internal/domain/user"
@@ -12,10 +14,10 @@ import (
 )
 
 type UserRI interface {
+	GetUser(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error)
 	InsertUser(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 	UpdateUser(ctx context.Context, id int, args []interface{}) (pgconn.CommandTag, error)
 	DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, error)
-	GetUserData(ctx context.Context, dto domainAuth.UserDto) pgx.Row
 }
 
 type UserRepo struct {
@@ -30,19 +32,34 @@ func NewUserRepo(store *pgsql.Storage) *UserRepo {
 	}
 }
 
-func (ar *UserRepo) GetUserData(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error) {
-	sql := `SELECT * FROM users WHERE email = $1 or id = $2 LIMIT 1`
-	args := []interface{}{dto.Email, dto.Id}
+func (ar *UserRepo) GetUser(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error) {
+	var user domainUser.User
 
-	rows, err := ar.db.Query(ctx, sql, args...)
+	args := []interface{}{}
+	cond := ""
 
-	if err != nil {
-		return domainUser.User{}, err
+	if dto.Email == "" {
+		cond = `id = $1`
+		args = append(args, dto.Id)
+	} else {
+		cond = `email = $1`
+		args = append(args, dto.Email)
 	}
 
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domainUser.User])
+	sql := `SELECT * FROM ` + user.TableName() + ` WHERE ` + cond + ` LIMIT 1`
+
+	err := ar.db.QueryRow(ctx, sql, args...).Scan(
+		&user.Id, &user.Email, &user.Password, &user.Activation,
+		&user.Name, &user.Surname, &user.TokenSecretKey,
+		&user.UpdatedAt, &user.CreatedAt, &user.ConfirmCode,
+		&user.ConfirmedAt, &user.ConfirmStatus,
+	)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domainUser.User{}, nil
+		}
+
 		return domainUser.User{}, err
 	}
 
@@ -65,9 +82,10 @@ func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (domainU
 		return domainUser.User{}, err
 	}
 
-	user, err := ar.GetUserData(ctx, domainAuth.UserDto{Id: id})
+	user, err := ar.GetUser(ctx, domainAuth.UserDto{Id: id})
 
 	if err != nil {
+		fmt.Println("insert 2 <--")
 		return domainUser.User{}, err
 	}
 
