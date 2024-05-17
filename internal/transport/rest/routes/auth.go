@@ -225,4 +225,36 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodPost)
+
+	// route: /auth/resend/{section}
+	r.HandleFunc("/auth/resend/{section}/", func(w http.ResponseWriter, r *http.Request) {
+		log := logger.Setup(a.Config.Env)
+		pg, err := pgsql.New(a.Storage, "master")
+
+		if err != nil {
+			log.Error("failed to init storage", slog.Err(err))
+			return
+		}
+
+		log.Info("starting database")
+
+		vars := mux.Vars(r)
+		authService := service.NewAuthService(pg)
+		jsond, _ := io.ReadAll(r.Body)
+
+		response, err := authService.Resend(context.Background(), service.SectionSend(vars["section"]), jsond)
+
+		if err != nil {
+			log.Error("failed to execute Logout service", slog.Err(err))
+			return
+		} else {
+			if response == nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+	}).Methods(http.MethodPost)
 }

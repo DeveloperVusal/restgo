@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -33,8 +35,16 @@ type Auths interface {
 	// Recover(ctx context.Context)
 	VerifyToken(ctx context.Context, header_auth []string) (bool, error)
 	Refresh(ctx context.Context, tokenCookie *http.Cookie, dto domainAuth.LoginDto)
+	Resend(ctx context.Context, section string, body []byte) (*response.Response, error)
 	// RecoverPasswordCheckToken(ctx context.Context)
 }
+
+type SectionSend string
+
+const (
+	ACTIVATION SectionSend = "activation"
+	RECOVERY   SectionSend = "recovery"
+)
 
 type AuthService struct {
 	db *pgsql.Storage
@@ -463,7 +473,7 @@ func (ar *AuthService) Activation(ctx context.Context, dto domainAuth.Activation
 				}()
 
 				// Activating account
-				cmdtag, err := repoUser.UpdateUser(ctx, int(user.Id), &domainUser.User{
+				_, cmdtag, err := repoUser.UpdateUser(ctx, int(user.Id), &domainUser.User{
 					Activation: true,
 				})
 
@@ -511,6 +521,68 @@ func (ar *AuthService) Activation(ctx context.Context, dto domainAuth.Activation
 				}, nil
 			}
 		}
+	}
+
+	return nil, nil
+}
+
+func (ar *AuthService) Resend(ctx context.Context, section SectionSend, body []byte) (*response.Response, error) {
+	confirmCode := generate.RandomNumbers(6)
+
+	switch section {
+	case ACTIVATION:
+		dto := domainAuth.ActivationDto{}
+		_ = json.Unmarshal(body, &dto)
+
+		repoUser := repository.NewUserRepo(ar.db)
+		user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+
+		if err != nil {
+			return nil, err
+		}
+
+		user, cmdtag, err := repoUser.UpdateUser(ctx, int(user.Id), &domainUser.User{
+			ConfirmCode: sql.NullString{
+				String: confirmCode,
+			},
+			ConfirmedAt: sql.NullTime{
+				Time: time.Now(),
+			},
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if cmdtag.RowsAffected() <= 0 {
+			return nil, err
+		} else {
+			subject, text := mails.Confirm(map[string]string{
+				"confirmCode":  confirmCode,
+				"confirmed_at": user.ConfirmedAt.Time.Format("02-01-2006 15:04:05"),
+			})
+
+			// TODO: recommendation use RabbitMQ
+			go func() {
+				smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+				m := mail.Mailer{
+					SmtpHost:     os.Getenv("SMTP_HOST"),
+					SmtpPort:     smtpPort,
+					SmtpUser:     os.Getenv("SMTP_USER"),
+					SmtpPassword: os.Getenv("SMTP_PASSWORD"),
+				}
+				// Sends message to emails address
+				m.SendMail([]string{user.Email}, subject, text)
+			}()
+
+			return &response.Response{
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
+				Message: "a code was sent to your email",
+			}, nil
+		}
+	case RECOVERY:
+		// TODO: will be add handler
 	}
 
 	return nil, nil

@@ -18,7 +18,7 @@ import (
 type UserRI interface {
 	GetUser(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error)
 	InsertUser(ctx context.Context, args []interface{}) (domainUser.User, error)
-	UpdateUser(ctx context.Context, id int, args []interface{}) (pgconn.CommandTag, error)
+	UpdateUser(ctx context.Context, id int, args []interface{}) (domainUser.User, error)
 	DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, error)
 }
 
@@ -93,7 +93,7 @@ func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (domainU
 	return user, nil
 }
 
-func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.User) (pgconn.CommandTag, error) {
+func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.User) (domainUser.User, pgconn.CommandTag, error) {
 	// SQL-query
 	sql := "UPDATE users SET "
 
@@ -128,6 +128,10 @@ func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.Use
 		sql += "confirm_code = $" + strconv.Itoa(len(args)+1) + ", "
 		args = append(args, user.ConfirmCode.String)
 	}
+	if utils.IsFieldInitialized(user, "ConfirmedAt") {
+		sql += "confirmed_at = $" + strconv.Itoa(len(args)+1) + ", "
+		args = append(args, user.ConfirmedAt.Time.Format("2006-01-02 15:04:05"))
+	}
 	if utils.IsFieldInitialized(user, "ConfirmStatus") {
 		sql += "confirm_status = $" + strconv.Itoa(len(args)+1) + ", "
 		args = append(args, user.ConfirmStatus)
@@ -144,8 +148,14 @@ func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.Use
 	commandTag, err := ar.db.Exec(ctx, sql, args...)
 
 	if err != nil {
-		return pgconn.CommandTag{}, err
+		return domainUser.User{}, pgconn.CommandTag{}, err
 	}
 
-	return commandTag, nil
+	updUser, err := ar.GetUser(ctx, domainAuth.UserDto{Id: id})
+
+	if err != nil {
+		return domainUser.User{}, pgconn.CommandTag{}, err
+	}
+
+	return updUser, commandTag, nil
 }

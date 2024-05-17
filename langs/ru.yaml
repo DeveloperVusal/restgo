@@ -24,3 +24,8 @@ mail:
   activation:
     subject: 'Подтверждение аккаунта - ${APP_NAME}'
     body: '<center><h2>Ваш аккаунт успешно подтвержден</h2></center>'
+  confirm:
+    subject: 'Код подтверждения - ${APP_NAME}'
+    body: '<h2>Код подтверждения безопасности!</h2>
+           <h3><i>{{ confirmCode }}</i></h3>
+           Ваш код подтверждения, актуален 5 минут от {{ confirmed_at }}'
