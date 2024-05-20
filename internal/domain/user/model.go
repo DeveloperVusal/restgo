@@ -16,6 +16,7 @@ type User struct {
 	Surname        sql.NullString    `db:"surname"`
 	TokenSecretKey string            `db:"token_secret_key,omitempty"`
 	ConfirmCode    sql.NullString    `db:"confirm_code,omitempty"`
+	ConfirmAction  sql.NullString    `db:"confirm_action,omitempty"`
 	ConfirmedAt    sql.NullTime      `db:"confirmed_at,omitempty"`
 	ConfirmStatus  ConfirmStatusEnum `db:"confirm_status,omitempty"`
 	UpdatedAt      sql.NullTime      `db:"updated_at,omitempty"`

@@ -54,7 +54,7 @@ func (ar *UserRepo) GetUser(ctx context.Context, dto domainAuth.UserDto) (domain
 		&user.Id, &user.Email, &user.Password, &user.Activation,
 		&user.Name, &user.Surname, &user.TokenSecretKey,
 		&user.UpdatedAt, &user.CreatedAt, &user.ConfirmCode,
-		&user.ConfirmedAt, &user.ConfirmStatus,
+		&user.ConfirmedAt, &user.ConfirmStatus, &user.ConfirmAction,
 	)
 
 	if err != nil {
@@ -75,7 +75,7 @@ func (ar *UserRepo) DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, 
 }
 
 func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (domainUser.User, error) {
-	sql := `INSERT INTO users (email, password, name, surname, confirm_code, confirm_status, token_secret_key, confirmed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()::timestamp, NOW()::timestamp) RETURNING id;`
+	sql := `INSERT INTO users (email, password, name, surname, confirm_code, confirm_action, confirm_status, token_secret_key, confirmed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()::timestamp, NOW()::timestamp) RETURNING id;`
 	id := 0
 
 	err := ar.db.QueryRow(ctx, sql, args...).Scan(&id)
@@ -135,6 +135,10 @@ func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.Use
 	if utils.IsFieldInitialized(user, "ConfirmStatus") {
 		sql += "confirm_status = $" + strconv.Itoa(len(args)+1) + ", "
 		args = append(args, user.ConfirmStatus)
+	}
+	if utils.IsFieldInitialized(user, "ConfirmAction") {
+		sql += "confirm_action = $" + strconv.Itoa(len(args)+1) + ", "
+		args = append(args, user.ConfirmAction.String)
 	}
 
 	// Removing extra the comma and space in SQL-query ends

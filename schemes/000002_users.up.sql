@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP(0),
   created_at TIMESTAMP(0) NOT NULL,
   confirm_code CHAR(6) DEFAULT NULL::bpchar,
+  confirm_action VARCHAR(10) DEFAULT NULL,
   confirmed_at TIMESTAMP(0) DEFAULT NULL::TIMESTAMP without time zone,
   confirm_status users_confirm_status,
   CONSTRAINT users_pkey PRIMARY KEY (id),

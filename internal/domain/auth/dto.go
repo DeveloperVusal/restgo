@@ -38,3 +38,20 @@ type ActivationDto struct {
 	Key   string `json:"key" validate:"required,sha256"`
 	Code  int    `json:"code" validate:"required,numeric"`
 }
+
+type ForgotDto struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type RecoveryDto struct {
+	Email           string `json:"email" validate:"required,email"`
+	Code            int    `json:"code" validate:"required,numeric"`
+	Password        string `json:"password" validate:"required"`
+	ConfirmPassword string `json:"confirm_password" validate:"required"`
+}
+
+type ConfirmCheckDto struct {
+	Email  string `json:"email" validate:"required,email"`
+	Action string `json:"action" validate:"required,oneof_insensitive=registration forgot"`
+	Code   int    `json:"code" validate:"required,numeric"`
+}

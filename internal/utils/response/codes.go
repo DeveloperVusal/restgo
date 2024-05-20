@@ -17,4 +17,6 @@ const (
 	ErrorAccountActivateTimeout = 6
 	// When don't match of confirm code
 	ErrorAccountInvalidCode = 6
+	// When not found a user account
+	ErrorAccountNotFound = 7
 )
