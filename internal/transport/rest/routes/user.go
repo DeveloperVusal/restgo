@@ -26,6 +26,7 @@ type User struct {
 }
 
 func (u *User) NewHandler(r *mux.Router) {
+	// route: get a user
 	r.HandleFunc("/users/{id}/", rest.Adapt(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log := logger.Setup(u.Config.Env)
@@ -65,6 +66,7 @@ func (u *User) NewHandler(r *mux.Router) {
 		u.Middlewares...,
 	).ServeHTTP).Methods(http.MethodGet)
 
+	// route: get users
 	r.HandleFunc("/users/", rest.Adapt(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log := logger.Setup(u.Config.Env)
@@ -98,6 +100,7 @@ func (u *User) NewHandler(r *mux.Router) {
 		u.Middlewares...,
 	).ServeHTTP).Methods(http.MethodGet)
 
+	// route: create a user
 	r.HandleFunc("/users/", rest.Adapt(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			log := logger.Setup(u.Config.Env)
