@@ -132,9 +132,57 @@ func (u *User) NewHandler(r *mux.Router) {
 				}
 			}
 
+			if response.HttpCode == 0 {
+				response.HttpCode = http.StatusOK
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(response.CreateResponseData())
+			w.WriteHeader(response.HttpCode)
+		}),
+		u.Middlewares...,
+	).ServeHTTP).Methods(http.MethodPost)
+
+	// route: update a user
+	r.HandleFunc("/users/{id}/", rest.Adapt(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log := logger.Setup(u.Config.Env)
+			pg, err := pgsql.New(u.Storage, "master")
+
+			if err != nil {
+				log.Error("failed to init storage", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			log.Info("starting database")
+
+			vars := mux.Vars(r)
+			userService := service.NewUserService(pg)
+			paramId, _ := strconv.Atoi(vars["id"])
+
+			b, _ := io.ReadAll(r.Body)
+			dto := domainUser.UpdateUserDto{}
+			_ = json.Unmarshal(b, &dto)
+
+			dto.Id = paramId
+
+			response, err := userService.UpdateUser(context.Background(), dto)
+
+			if err != nil {
+				log.Error("failed to execute UpdateUser service", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			} else {
+				if response == nil {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			}
+
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(response.CreateResponseData())
 		}),
 		u.Middlewares...,
-	).ServeHTTP).Methods(http.MethodPost)
+	).ServeHTTP).Methods(http.MethodPatch)
 }

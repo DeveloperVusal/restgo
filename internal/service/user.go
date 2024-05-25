@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 
 	domainUser "apibgo/internal/domain/user"
@@ -18,6 +19,7 @@ type Users interface {
 	GetUser(ctx context.Context, dto domainUser.UserDto) (*response.Response, error)
 	GetUsers(ctx context.Context) (*response.Response, error)
 	CreateUser(ctx context.Context, dto domainUser.UserDto) (*response.Response, error)
+	UpdateUser(ctx context.Context, dto domainUser.UserDto) (*response.Response, error)
 }
 
 type UserService struct {
@@ -146,11 +148,7 @@ func (ur *UserService) CreateUser(ctx context.Context, dto domainUser.CreateUser
 		}()
 
 		// Inserting in users
-		if dto.ConfirmStatus == "" {
-			dto.ConfirmStatus = domainUser.ConfirmStatus_UNKNOWN
-		}
-
-		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, "", "", dto.ConfirmStatus, tokenSecret}
+		args := []interface{}{dto.Email, pwd_hash, dto.Name, dto.Surname, "", "", domainUser.ConfirmStatusEnum(dto.ConfirmStatus), tokenSecret}
 		user, err := repoUser.InsertUser(ctx, args)
 
 		if err != nil {
@@ -166,7 +164,7 @@ func (ur *UserService) CreateUser(ctx context.Context, dto domainUser.CreateUser
 			return &response.Response{
 				Code:    response.ErrorEmpty,
 				Status:  response.StatusSuccess,
-				Message: "Data is got",
+				Message: "user created successfully",
 				Result: map[string]interface{}{
 					"id":         user.Id,
 					"email":      user.Email,
@@ -193,4 +191,122 @@ func (ur *UserService) CreateUser(ctx context.Context, dto domainUser.CreateUser
 		Status:  response.StatusError,
 		Message: "user with this email address already exists",
 	}, nil
+}
+
+func (ur *UserService) UpdateUser(ctx context.Context, dto domainUser.UpdateUserDto) (*response.Response, error) {
+	// Trying find a user in the users table
+	repoUser := repository.NewUserRepo(ur.db)
+
+	if dto.Email != "" {
+		user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if user.Id > 0 && user.Id != uint(dto.Id) {
+			return &response.Response{
+				Code:    response.ErrorAccountExists,
+				Status:  response.StatusError,
+				Message: "user with this email address already exists",
+			}, nil
+		}
+	}
+
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Id: dto.Id})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if user.Id > 0 {
+		var pwd_hash string
+
+		if dto.Password != "" && dto.ConfirmPassword != "" {
+			// If don't match passwords
+			if dto.Password != dto.ConfirmPassword {
+				return &response.Response{
+					Code:    response.ErrorAccountConfirmPassword,
+					Status:  response.StatusError,
+					Message: "don't match passwords",
+				}, nil
+			}
+
+			// Generate password
+			pwd_hash, err = pswd.HashPassword(dto.Password)
+
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// start transaction
+		tx, err := ur.db.Db.BeginTx(ctx, pgx.TxOptions{})
+
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() {
+			if err != nil {
+				tx.Rollback(ctx)
+			}
+		}()
+
+		modelUser := &domainUser.User{
+			Activation: dto.Activation,
+		}
+
+		if dto.Email != "" {
+			modelUser.Email = dto.Email
+		}
+
+		if len(pwd_hash) > 5 {
+			modelUser.Password = pwd_hash
+		}
+
+		if dto.Name != "" {
+			modelUser.Name = sql.NullString{String: dto.Name}
+		}
+
+		if dto.Surname != "" {
+			modelUser.Surname = sql.NullString{String: dto.Surname}
+		}
+
+		if dto.ConfirmStatus != "" {
+			modelUser.ConfirmStatus = domainUser.ConfirmStatusEnum(dto.ConfirmStatus)
+		}
+
+		updUser, cmdtag, err := repoUser.UpdateUser(ctx, int(user.Id), modelUser)
+
+		if err != nil {
+			tx.Rollback(ctx)
+
+			return nil, err
+		}
+
+		if cmdtag.RowsAffected() <= 0 {
+			tx.Rollback(ctx)
+
+			return nil, err
+		} else {
+			tx.Commit(ctx)
+
+			return &response.Response{
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
+				Message: "user data updated successfully",
+				Result: map[string]interface{}{
+					// "id":         updUser.Id,
+					"email":      updUser.Email,
+					"name":       updUser.Name.String,
+					"surname":    updUser.Surname.String,
+					"activation": updUser.Activation,
+					"status":     updUser.ConfirmStatus,
+				},
+			}, nil
+		}
+	}
+
+	return nil, nil
 }
