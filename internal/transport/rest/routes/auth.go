@@ -31,6 +31,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -80,6 +81,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Login service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
@@ -102,6 +104,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -116,6 +119,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Registration service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -141,6 +145,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -151,6 +156,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Logout service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -175,6 +181,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -190,6 +197,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Refresh service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -213,6 +221,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -239,6 +248,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -253,6 +263,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Activation service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
@@ -272,6 +283,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -286,6 +298,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Forgot service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
@@ -305,6 +318,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -319,6 +333,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Recovery service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
@@ -338,6 +353,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -352,6 +368,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute ConfirmCheck service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
@@ -371,6 +388,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to init storage", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -384,6 +402,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 		if err != nil {
 			log.Error("failed to execute Resend service", slog.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
 			if response == nil {
