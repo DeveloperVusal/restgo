@@ -56,6 +56,11 @@ func (ar *UserService) GetUsers(ctx context.Context) (*response.Response, error)
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
 	users, err := repoUser.GetUsers(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
 	count, err := repoUser.GetCountUsers(ctx)
 
 	if err != nil {
