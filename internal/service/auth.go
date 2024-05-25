@@ -71,7 +71,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*res
 	repoUser := repository.NewUserRepo(ar.db)
 	repoAuth := repository.NewAuthRepo(ar.db)
 	dto.Device = strings.ToLower(device.DetectDevice(dto.UserAgent))
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -184,7 +184,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*res
 func (ar *AuthService) Registration(ctx context.Context, dto domainAuth.RegistrationDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -439,7 +439,7 @@ func (ar *AuthService) VerifyToken(ctx context.Context, header_auth []string) (b
 func (ar *AuthService) Activation(ctx context.Context, dto domainAuth.ActivationDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -542,7 +542,7 @@ func (ar *AuthService) Activation(ctx context.Context, dto domainAuth.Activation
 func (ar *AuthService) Forgot(ctx context.Context, dto domainAuth.ForgotDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -612,7 +612,7 @@ func (ar *AuthService) Forgot(ctx context.Context, dto domainAuth.ForgotDto) (*r
 func (ar *AuthService) ConfirmCheck(ctx context.Context, dto domainAuth.ConfirmCheckDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -668,7 +668,7 @@ func (ar *AuthService) ConfirmCheck(ctx context.Context, dto domainAuth.ConfirmC
 func (ar *AuthService) Recovery(ctx context.Context, dto domainAuth.RecoveryDto) (*response.Response, error) {
 	// Trying find a user in the users table
 	repoUser := repository.NewUserRepo(ar.db)
-	user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 	if err != nil {
 		return nil, err
@@ -781,7 +781,7 @@ func (ar *AuthService) Resend(ctx context.Context, section SectionSend, body []b
 		_ = json.Unmarshal(body, &dto)
 
 		repoUser := repository.NewUserRepo(ar.db)
-		user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+		user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 		if err != nil {
 			return nil, err
@@ -835,7 +835,7 @@ func (ar *AuthService) Resend(ctx context.Context, section SectionSend, body []b
 		_ = json.Unmarshal(body, &dto)
 
 		repoUser := repository.NewUserRepo(ar.db)
-		user, err := repoUser.GetUser(ctx, domainAuth.UserDto{Email: dto.Email})
+		user, err := repoUser.GetUser(ctx, domainUser.UserDto{Email: dto.Email})
 
 		if err != nil {
 			return nil, err

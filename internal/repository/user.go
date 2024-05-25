@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	domainAuth "apibgo/internal/domain/auth"
 	domainUser "apibgo/internal/domain/user"
 	"apibgo/internal/storage/pgsql"
 	"apibgo/pkg/utils"
@@ -16,7 +15,7 @@ import (
 )
 
 type UserRI interface {
-	GetUser(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error)
+	GetUser(ctx context.Context, dto domainUser.UserDto) (domainUser.User, error)
 	InsertUser(ctx context.Context, args []interface{}) (domainUser.User, error)
 	UpdateUser(ctx context.Context, id int, args []interface{}) (domainUser.User, error)
 	DeleteUser(ctx context.Context, id int) (pgconn.CommandTag, error)
@@ -34,7 +33,7 @@ func NewUserRepo(store *pgsql.Storage) *UserRepo {
 	}
 }
 
-func (ar *UserRepo) GetUser(ctx context.Context, dto domainAuth.UserDto) (domainUser.User, error) {
+func (ar *UserRepo) GetUser(ctx context.Context, dto domainUser.UserDto) (domainUser.User, error) {
 	var user domainUser.User
 
 	args := []interface{}{}
@@ -84,7 +83,7 @@ func (ar *UserRepo) InsertUser(ctx context.Context, args []interface{}) (domainU
 		return domainUser.User{}, err
 	}
 
-	user, err := ar.GetUser(ctx, domainAuth.UserDto{Id: id})
+	user, err := ar.GetUser(ctx, domainUser.UserDto{Id: id})
 
 	if err != nil {
 		return domainUser.User{}, err
@@ -155,11 +154,67 @@ func (ar *UserRepo) UpdateUser(ctx context.Context, id int, user *domainUser.Use
 		return domainUser.User{}, pgconn.CommandTag{}, err
 	}
 
-	updUser, err := ar.GetUser(ctx, domainAuth.UserDto{Id: id})
+	updUser, err := ar.GetUser(ctx, domainUser.UserDto{Id: id})
 
 	if err != nil {
 		return domainUser.User{}, pgconn.CommandTag{}, err
 	}
 
 	return updUser, commandTag, nil
+}
+
+func (ar *UserRepo) GetUsers(ctx context.Context) ([]domainUser.User, error) {
+	var users []domainUser.User
+
+	userModel := domainUser.User{}
+	args := []interface{}{}
+
+	sql := `SELECT * FROM ` + userModel.TableName()
+	rows, err := ar.db.Query(ctx, sql, args...)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		user := domainUser.User{}
+		err = rows.Scan(
+			&user.Id, &user.Email, &user.Password, &user.Activation,
+			&user.Name, &user.Surname, &user.TokenSecretKey,
+			&user.UpdatedAt, &user.CreatedAt, &user.ConfirmCode,
+			&user.ConfirmedAt, &user.ConfirmStatus, &user.ConfirmAction,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+func (ar *UserRepo) GetCountUsers(ctx context.Context) (int, error) {
+	var user domainUser.User
+	var count int
+
+	sql := `SELECT COUNT(id) FROM ` + user.TableName()
+	err := ar.db.QueryRow(ctx, sql).Scan(&count)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+
+		return 0, err
+	}
+
+	return count, nil
 }

@@ -1,10 +1,5 @@
 package auth
 
-type UserDto struct {
-	Id    int    `json:"id" validate:"omitempty,numeric"`
-	Email string `json:"email" validate:"omitempty,email"`
-}
-
 type LoginDto struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required"`

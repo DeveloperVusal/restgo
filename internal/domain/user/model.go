@@ -1,4 +1,4 @@
-package domain
+package user
 
 import (
 	"database/sql"
@@ -38,6 +38,11 @@ const (
 )
 
 func (ge *ConfirmStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		*ge = ConfirmStatus_UNKNOWN
+		return nil
+	}
+
 	switch v := value.(type) {
 	case string:
 		switch string(v) {
