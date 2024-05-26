@@ -185,4 +185,41 @@ func (u *User) NewHandler(r *mux.Router) {
 		}),
 		u.Middlewares...,
 	).ServeHTTP).Methods(http.MethodPatch)
+
+	// route: delete a user
+	r.HandleFunc("/users/{id}/", rest.Adapt(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log := logger.Setup(u.Config.Env)
+			pg, err := pgsql.New(u.Storage, "master")
+
+			if err != nil {
+				log.Error("failed to init storage", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			log.Info("starting database")
+
+			vars := mux.Vars(r)
+			userService := service.NewUserService(pg)
+			paramId, _ := strconv.Atoi(vars["id"])
+
+			response, err := userService.DeleteUser(context.Background(), paramId)
+
+			if err != nil {
+				log.Error("failed to execute DeleteUser service", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			} else {
+				if response == nil {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(response.CreateResponseData())
+		}),
+		u.Middlewares...,
+	).ServeHTTP).Methods(http.MethodDelete)
 }

@@ -310,3 +310,52 @@ func (ur *UserService) UpdateUser(ctx context.Context, dto domainUser.UpdateUser
 
 	return nil, nil
 }
+
+func (ur *UserService) DeleteUser(ctx context.Context, user_id int) (*response.Response, error) {
+	// Trying find a user in the users table
+	repoUser := repository.NewUserRepo(ur.db)
+	user, err := repoUser.GetUser(ctx, domainUser.UserDto{Id: user_id})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if user.Id > 0 {
+		// start transaction
+		tx, err := ur.db.Db.BeginTx(ctx, pgx.TxOptions{})
+
+		if err != nil {
+			return nil, err
+		}
+
+		defer func() {
+			if err != nil {
+				tx.Rollback(ctx)
+			}
+		}()
+
+		cmdtag, err := repoUser.DeleteUser(ctx, int(user.Id))
+
+		if err != nil {
+			tx.Rollback(ctx)
+
+			return nil, err
+		}
+
+		if cmdtag.RowsAffected() <= 0 {
+			tx.Rollback(ctx)
+
+			return nil, err
+		} else {
+			tx.Commit(ctx)
+
+			return &response.Response{
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
+				Message: "user deleted successfully",
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
