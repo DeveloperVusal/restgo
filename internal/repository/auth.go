@@ -15,6 +15,8 @@ type AuthRI interface {
 	GetAuth(ctx context.Context, dto domainAuth.RefreshDto) (domainAuth.Auth, error)
 	DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error)
 	InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
+	GetSessions(ctx context.Context, dto domainAuth.SessionDto) ([]domainAuth.Auth, error)
+	GetCountSessions(ctx context.Context) (int, error)
 }
 
 type AuthRepo struct {
@@ -59,6 +61,59 @@ func (ar *AuthRepo) GetAuth(ctx context.Context, dto domainAuth.RefreshDto) (dom
 	}
 
 	return auth, nil
+}
+
+func (ar *AuthRepo) GetSessions(ctx context.Context, dto domainAuth.SessionDto) ([]domainAuth.Auth, error) {
+	var auths []domainAuth.Auth
+
+	authModel := domainAuth.Auth{}
+
+	sql := `SELECT * FROM ` + authModel.TableName() + ` WHERE user_id = $1`
+	rows, err := ar.db.Query(ctx, sql, dto.Id)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		auth := domainAuth.Auth{}
+		err = rows.Scan(
+			&auth.Id, &auth.UserId, &auth.AccessToken, &auth.RefreshToken,
+			&auth.Ip, &auth.Device, &auth.UserAgent, &auth.CreatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		auths = append(auths, auth)
+	}
+
+	return auths, nil
+}
+
+func (ar *AuthRepo) GetCountSessions(ctx context.Context, dto domainAuth.SessionDto) (int, error) {
+	var auth domainAuth.Auth
+	var count int
+
+	sql := `SELECT COUNT(id) FROM ` + auth.TableName() + ` WHERE user_id = $1`
+	err := ar.db.QueryRow(ctx, sql, dto.Id).Scan(&count)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, nil
+		}
+
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (ar *AuthRepo) DeleteAuth(ctx context.Context, dto domainAuth.DestroyDto) (pgconn.CommandTag, error) {

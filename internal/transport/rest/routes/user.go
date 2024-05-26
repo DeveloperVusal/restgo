@@ -26,6 +26,40 @@ type User struct {
 }
 
 func (u *User) NewHandler(r *mux.Router) {
+	// route: user sessions
+	r.HandleFunc("/users/sessions/", rest.Adapt(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log := logger.Setup(u.Config.Env)
+			pg, err := pgsql.New(u.Storage, "master")
+
+			if err != nil {
+				log.Error("failed to init storage", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			log.Info("starting database for sessions")
+
+			userService := service.NewUserService(pg)
+			response, err := userService.Sessions(context.Background(), r.Header["Authorization"])
+
+			if err != nil {
+				log.Error("failed to execute Sessions service", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			} else {
+				if response == nil {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(response.CreateResponseData())
+		}),
+		u.Middlewares...,
+	).ServeHTTP).Methods(http.MethodGet)
+
 	// route: get a user
 	r.HandleFunc("/users/{id}/", rest.Adapt(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

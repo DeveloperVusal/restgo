@@ -1,5 +1,9 @@
 package auth
 
+type SessionDto struct {
+	Id int `json:"id" validate:"required,number"`
+}
+
 type LoginDto struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required"`

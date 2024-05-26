@@ -26,7 +26,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		instance.Log.Info("starting database")
+		instance.Log.Info("starting database middleware")
 
 		authService := service.NewAuthService(pg)
 		isVerify, err := authService.VerifyToken(context.Background(), r.Header["Authorization"])

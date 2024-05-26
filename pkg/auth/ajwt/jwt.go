@@ -77,3 +77,23 @@ func IsJWT(tokenString string, secretKey string) error {
 
 	return nil
 }
+
+func GetClaims(tokenString string, secretKey string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Don't forget to validate the alg is what you expect:
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(secretKey), nil
+
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, _ := token.Claims.(jwt.MapClaims)
+
+	return claims, nil
+}

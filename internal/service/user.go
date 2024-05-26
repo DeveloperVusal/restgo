@@ -3,13 +3,20 @@ package service
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 
+	domainAuth "apibgo/internal/domain/auth"
 	domainUser "apibgo/internal/domain/user"
 	"apibgo/internal/repository"
 	"apibgo/internal/storage/pgsql"
 	"apibgo/internal/utils/auth/generate"
 	"apibgo/internal/utils/response"
+	"apibgo/pkg/auth/ajwt"
+	"apibgo/pkg/auth/device"
 	"apibgo/pkg/auth/pswd"
 
 	"github.com/jackc/pgx/v5"
@@ -20,6 +27,8 @@ type Users interface {
 	GetUsers(ctx context.Context) (*response.Response, error)
 	CreateUser(ctx context.Context, dto domainUser.UserDto) (*response.Response, error)
 	UpdateUser(ctx context.Context, dto domainUser.UserDto) (*response.Response, error)
+	DeleteUser(ctx context.Context, user_id int) (*response.Response, error)
+	Sessions(ctx context.Context, header_auth []string) (*response.Response, error)
 }
 
 type UserService struct {
@@ -353,6 +362,73 @@ func (ur *UserService) DeleteUser(ctx context.Context, user_id int) (*response.R
 				Code:    response.ErrorEmpty,
 				Status:  response.StatusSuccess,
 				Message: "user deleted successfully",
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (ur *UserService) Sessions(ctx context.Context, header_auth []string) (*response.Response, error) {
+	// Parse header Authorization and get token
+	split := strings.Split(header_auth[0], " ")
+	token := split[1]
+
+	// Checking on correct JWT
+	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+		return nil, err
+	}
+
+	payload, err := ajwt.GetClaims(token, os.Getenv("APP_JWT_SECRET"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	user_id, _ := strconv.Atoi(fmt.Sprintf("%v", payload["user_id"]))
+
+	if user_id > 0 {
+		repoAuth := repository.NewAuthRepo(ur.db)
+
+		auths, err := repoAuth.GetSessions(context.Background(), domainAuth.SessionDto{
+			Id: user_id,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		count, err := repoAuth.GetCountSessions(context.Background(), domainAuth.SessionDto{
+			Id: user_id,
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if len(auths) > 0 {
+			var respAuths []map[string]interface{}
+
+			for _, auth := range auths {
+				respAuths = append(respAuths, map[string]interface{}{
+					"id": auth.Id,
+					"ip": auth.Ip,
+					"device": map[string]string{
+						"name": auth.Device,
+						"info": strings.Join([]string{device.DetectOS(auth.UserAgent), device.DetectBrowser(auth.UserAgent)}, ","),
+					},
+					"time": auth.CreatedAt.Format("02-01-2006 15:04:05"),
+				})
+			}
+
+			return &response.Response{
+				Code:    response.ErrorEmpty,
+				Status:  response.StatusSuccess,
+				Message: "data is got",
+				Result: map[string]interface{}{
+					"count": count,
+					"data":  respAuths,
+				},
 			}, nil
 		}
 	}
