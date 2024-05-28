@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"apibgo/internal/app/instance"
 	"apibgo/internal/service"
@@ -29,7 +30,9 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 		instance.Log.Info("starting database middleware")
 
 		authService := service.NewAuthService(pg)
-		isVerify, err := authService.VerifyToken(context.Background(), r.Header["Authorization"])
+		split := strings.Split(r.Header["Authorization"][0], " ")
+		token := split[1]
+		isVerify, err := authService.VerifyToken(context.Background(), token)
 
 		if err != nil {
 			instance.Log.Error("failed to execute VerifyToken service", slog.Err(err))

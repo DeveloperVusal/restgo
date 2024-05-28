@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"apibgo/internal/config"
 	domainAuth "apibgo/internal/domain/auth"
@@ -228,7 +229,10 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		log.Info("starting database")
 
 		authService := service.NewAuthService(pg)
-		isVerify, err := authService.VerifyToken(context.Background(), r.Header["Authorization"])
+		// Parse header Authorization and get token
+		split := strings.Split(r.Header["Authorization"][0], " ")
+		token := split[1]
+		isVerify, err := authService.VerifyToken(context.Background(), token)
 
 		if err != nil {
 			log.Error("failed to execute VerifyToken service", slog.Err(err))

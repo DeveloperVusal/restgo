@@ -4,6 +4,15 @@ type SessionDto struct {
 	Id int `json:"id" validate:"required,number"`
 }
 
+type AuthDto struct {
+	Id        int
+	UserId    int
+	Refresh   string
+	Device    string
+	Ip        string
+	UserAgent string
+}
+
 type LoginDto struct {
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required"`
@@ -23,13 +32,6 @@ type RegistrationDto struct {
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 	Name            string `json:"name" validate:"required,alphaunicode"`
 	Surname         string `json:"surname" validate:"required,alphaunicode"`
-}
-
-type RefreshDto struct {
-	Refresh   string
-	Device    string
-	Ip        string
-	UserAgent string
 }
 
 type ActivationDto struct {

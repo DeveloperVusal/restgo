@@ -12,7 +12,7 @@ import (
 )
 
 type AuthRI interface {
-	GetAuth(ctx context.Context, dto domainAuth.RefreshDto) (domainAuth.Auth, error)
+	GetAuth(ctx context.Context, dto domainAuth.AuthDto) (domainAuth.Auth, error)
 	DeleteAuth(ctx context.Context, id int) (pgconn.CommandTag, error)
 	InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error)
 	GetSessions(ctx context.Context, dto domainAuth.SessionDto) ([]domainAuth.Auth, error)
@@ -31,18 +31,23 @@ func NewAuthRepo(store *pgsql.Storage) *AuthRepo {
 	}
 }
 
-func (ar *AuthRepo) GetAuth(ctx context.Context, dto domainAuth.RefreshDto) (domainAuth.Auth, error) {
+func (ar *AuthRepo) GetAuth(ctx context.Context, dto domainAuth.AuthDto) (domainAuth.Auth, error) {
 	var auth domainAuth.Auth
 
 	args := []interface{}{}
 	cond := ""
 
-	if dto.Refresh == "" {
-		cond = `user_agent = $1 AND ip = $2 AND device = $3`
-		args = append(args, dto.UserAgent, dto.Ip, dto.Device)
+	if dto.Id > 0 && dto.UserId > 0 {
+		cond = `id = $1 AND user_id = $2`
+		args = append(args, dto.Id, dto.UserId)
 	} else {
-		cond = `refresh_token = $1`
-		args = append(args, dto.Refresh)
+		if dto.Refresh == "" {
+			cond = `user_agent = $1 AND ip = $2 AND device = $3`
+			args = append(args, dto.UserAgent, dto.Ip, dto.Device)
+		} else {
+			cond = `refresh_token = $1`
+			args = append(args, dto.Refresh)
+		}
 	}
 
 	sql := `SELECT * FROM auths WHERE ` + cond + ` LIMIT 1`
@@ -117,9 +122,22 @@ func (ar *AuthRepo) GetCountSessions(ctx context.Context, dto domainAuth.Session
 }
 
 func (ar *AuthRepo) DeleteAuth(ctx context.Context, dto domainAuth.DestroyDto) (pgconn.CommandTag, error) {
-	sql := `DELETE FROM auths WHERE access_token = $1 OR id = $2`
+	authModel := domainAuth.Auth{}
 
-	return ar.db.Exec(ctx, sql, dto.Token, dto.Id)
+	args := []interface{}{}
+	cond := ""
+
+	if dto.Id > 0 {
+		cond = `id = $1`
+		args = append(args, dto.Id)
+	} else {
+		cond = `access_token = $1`
+		args = append(args, dto.Token)
+	}
+
+	sql := `DELETE FROM ` + authModel.TableName() + ` WHERE ` + cond
+
+	return ar.db.Exec(ctx, sql, args...)
 }
 
 func (ar *AuthRepo) InsertAuth(ctx context.Context, args []interface{}) (pgconn.CommandTag, error) {

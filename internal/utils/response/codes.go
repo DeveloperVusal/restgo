@@ -19,4 +19,8 @@ const (
 	ErrorAccountInvalidCode = 6
 	// When not found a user account
 	ErrorAccountNotFound = 7
+	// When token is expired
+	ErrorTokenExpired = 8
+	// When access forbidden
+	ErrorPermissionForbidden = 9
 )

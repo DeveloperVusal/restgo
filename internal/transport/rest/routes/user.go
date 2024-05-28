@@ -60,6 +60,48 @@ func (u *User) NewHandler(r *mux.Router) {
 		u.Middlewares...,
 	).ServeHTTP).Methods(http.MethodGet)
 
+	// route: destroy user session
+	r.HandleFunc("/users/sessions/{id}/", rest.Adapt(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log := logger.Setup(u.Config.Env)
+			pg, err := pgsql.New(u.Storage, "master")
+
+			if err != nil {
+				log.Error("failed to init storage", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			log.Info("starting database for sessions")
+
+			vars := mux.Vars(r)
+			userService := service.NewUserService(pg)
+			paramId, _ := strconv.Atoi(vars["id"])
+
+			response, err := userService.DestroySession(context.Background(), r.Header["Authorization"], paramId)
+
+			if err != nil {
+				log.Error("failed to execute Sessions service", slog.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			} else {
+				if response == nil {
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			}
+
+			if response.HttpCode == 0 {
+				response.HttpCode = http.StatusOK
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(response.HttpCode)
+			w.Write(response.CreateResponseData())
+		}),
+		u.Middlewares...,
+	).ServeHTTP).Methods(http.MethodDelete)
+
 	// route: get a user
 	r.HandleFunc("/users/{id}/", rest.Adapt(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -171,8 +213,8 @@ func (u *User) NewHandler(r *mux.Router) {
 			}
 
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(response.CreateResponseData())
 			w.WriteHeader(response.HttpCode)
+			w.Write(response.CreateResponseData())
 		}),
 		u.Middlewares...,
 	).ServeHTTP).Methods(http.MethodPost)

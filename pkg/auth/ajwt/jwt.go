@@ -56,7 +56,7 @@ func (j *JWT) NewPairTokens() (string, string) {
 	return access, refresh
 }
 
-func IsJWT(tokenString string, secretKey string) error {
+func IsJWT(tokenString string, secretKey string) (bool, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -68,14 +68,18 @@ func IsJWT(tokenString string, secretKey string) error {
 	})
 
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	if !token.Valid {
-		return fmt.Errorf("invalid token")
+	if token == nil {
+		return false, nil
 	}
 
-	return nil
+	if _, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return true, nil
+	}
+
+	return false, fmt.Errorf("invalid token")
 }
 
 func GetClaims(tokenString string, secretKey string) (jwt.MapClaims, error) {

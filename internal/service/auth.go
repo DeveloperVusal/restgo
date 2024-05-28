@@ -38,7 +38,6 @@ type Auths interface {
 	VerifyToken(ctx context.Context, header_auth []string) (bool, error)
 	Refresh(ctx context.Context, tokenCookie *http.Cookie, dto domainAuth.LoginDto)
 	Resend(ctx context.Context, section string, body []byte) (*response.Response, error)
-	// RecoverPasswordCheckToken(ctx context.Context)
 }
 
 type SectionSend string
@@ -89,7 +88,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*res
 		}
 
 		// Checking exist already authentication a user
-		auth, err := repoAuth.GetAuth(ctx, domainAuth.RefreshDto{
+		auth, err := repoAuth.GetAuth(ctx, domainAuth.AuthDto{
 			Device:    dto.Device,
 			Ip:        dto.Ip,
 			UserAgent: dto.UserAgent,
@@ -298,7 +297,9 @@ func (ar *AuthService) Logout(ctx context.Context, header_auth []string) (*respo
 	token := split[1]
 
 	// Checking on correct JWT
-	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+	_, err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET"))
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -338,14 +339,24 @@ func (ar *AuthService) Refresh(ctx context.Context, tokenCookie *http.Cookie, dt
 	// Prepare data
 	dto.Device = strings.ToLower(device.DetectDevice(dto.UserAgent))
 
-	// Checking on correct JWT
-	if err := ajwt.IsJWT(tokenCookie.Value, os.Getenv("APP_JWT_SECRET")); err != nil {
+	// Checking on verify Refresh token
+	isVerify, err := ar.VerifyToken(ctx, tokenCookie.Value)
+
+	if err != nil {
 		return nil, err
+	}
+
+	if !isVerify {
+		return &response.Response{
+			Code:    response.ErrorTokenExpired,
+			Status:  response.StatusError,
+			Message: "token is expired",
+		}, nil
 	}
 
 	// Get session
 	repoAuth := repository.NewAuthRepo(ar.db)
-	auth, err := repoAuth.GetAuth(ctx, domainAuth.RefreshDto{
+	auth, err := repoAuth.GetAuth(ctx, domainAuth.AuthDto{
 		Refresh: tokenCookie.Value,
 	})
 
@@ -353,84 +364,101 @@ func (ar *AuthService) Refresh(ctx context.Context, tokenCookie *http.Cookie, dt
 		return nil, err
 	}
 
-	tx, err := ar.db.Db.BeginTx(ctx, pgx.TxOptions{})
+	// Checking on verify Access token
+	isVerify, _ = ar.VerifyToken(ctx, auth.AccessToken)
 
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback(ctx)
-		}
-	}()
-
-	// Deleting session
-	cmdtag, err := repoAuth.DeleteAuth(ctx, domainAuth.DestroyDto{Id: int(auth.Id)})
-
-	// If whole successfully, then resets refresh token
-	if cmdtag.RowsAffected() <= 0 {
-		tx.Rollback(ctx)
-
-		return nil, err
-	} else {
-		// Creating pair tokens of jwt
-		myjwt := ajwt.JWT{
-			Secret: os.Getenv("APP_JWT_SECRET"),
-			UserId: int(auth.UserId),
-		}
-		access, refresh := myjwt.NewPairTokens()
-
-		// Inserting in sessions
-		args := []interface{}{auth.UserId, access, refresh, dto.Ip, dto.Device, dto.UserAgent}
-		cmdtag, err := repoAuth.InsertAuth(ctx, args)
+	if !isVerify {
+		tx, err := ar.db.Db.BeginTx(ctx, pgx.TxOptions{})
 
 		if err != nil {
-			tx.Rollback(ctx)
-
 			return nil, err
 		}
 
-		// If successfully, then we return the Response
-		if cmdtag.RowsAffected() > 0 {
-			var _cookies []*http.Cookie
+		defer func() {
+			if err != nil {
+				tx.Rollback(ctx)
+			}
+		}()
 
-			_cookies = append(_cookies, &http.Cookie{
-				Name:     "refresh_token",
-				Value:    refresh,
-				Path:     "/",
-				HttpOnly: true,
-				Expires:  time.Now().AddDate(0, 1, 0),
-			})
+		// Deleting session
+		cmdtag, err := repoAuth.DeleteAuth(ctx, domainAuth.DestroyDto{Id: int(auth.Id)})
 
-			tx.Commit(ctx)
-
-			return &response.Response{
-				Code:    response.ErrorEmpty,
-				Status:  response.StatusSuccess,
-				Message: "Data is got",
-				Result: map[string]interface{}{
-					"access_token":  access,
-					"refresh_token": refresh,
-				},
-				Cookies: _cookies,
-			}, nil
-		} else {
+		// If whole successfully, then resets refresh token
+		if cmdtag.RowsAffected() <= 0 {
 			tx.Rollback(ctx)
 
-			return nil, nil
+			return nil, err
+		} else {
+			// Creating pair tokens of jwt
+			myjwt := ajwt.JWT{
+				Secret: os.Getenv("APP_JWT_SECRET"),
+				UserId: int(auth.UserId),
+			}
+			access, refresh := myjwt.NewPairTokens()
+
+			// Inserting in sessions
+			args := []interface{}{auth.UserId, access, refresh, dto.Ip, dto.Device, dto.UserAgent}
+			cmdtag, err := repoAuth.InsertAuth(ctx, args)
+
+			if err != nil {
+				tx.Rollback(ctx)
+
+				return nil, err
+			}
+
+			// If successfully, then we return the Response
+			if cmdtag.RowsAffected() > 0 {
+				var _cookies []*http.Cookie
+
+				_cookies = append(_cookies, &http.Cookie{
+					Name:     "refresh_token",
+					Value:    refresh,
+					Path:     "/",
+					HttpOnly: true,
+					Expires:  time.Now().AddDate(0, 1, 0),
+				})
+
+				tx.Commit(ctx)
+
+				return &response.Response{
+					Code:    response.ErrorEmpty,
+					Status:  response.StatusSuccess,
+					Message: "Data is got",
+					Result: map[string]interface{}{
+						"access_token":  access,
+						"refresh_token": refresh,
+					},
+					Cookies: _cookies,
+				}, nil
+			} else {
+				tx.Rollback(ctx)
+
+				return nil, nil
+			}
 		}
+	} else {
+		return &response.Response{
+			Code:    response.ErrorEmpty,
+			Status:  response.StatusSuccess,
+			Message: "Data is got",
+			Result: map[string]interface{}{
+				"access_token":  auth.AccessToken,
+				"refresh_token": auth.RefreshToken,
+			},
+		}, nil
 	}
 }
 
-func (ar *AuthService) VerifyToken(ctx context.Context, header_auth []string) (bool, error) {
-	// Parse header Authorization and get token
-	split := strings.Split(header_auth[0], " ")
-	token := split[1]
-
+func (ar *AuthService) VerifyToken(ctx context.Context, token string) (bool, error) {
 	// Checking on correct JWT
-	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+	isVerify, err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET"))
+
+	if err != nil {
 		return false, err
+	}
+
+	if !isVerify {
+		return false, nil
 	}
 
 	return true, nil

@@ -375,7 +375,7 @@ func (ur *UserService) Sessions(ctx context.Context, header_auth []string) (*res
 	token := split[1]
 
 	// Checking on correct JWT
-	if err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+	if _, err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
 		return nil, err
 	}
 
@@ -389,7 +389,6 @@ func (ur *UserService) Sessions(ctx context.Context, header_auth []string) (*res
 
 	if user_id > 0 {
 		repoAuth := repository.NewAuthRepo(ur.db)
-
 		auths, err := repoAuth.GetSessions(context.Background(), domainAuth.SessionDto{
 			Id: user_id,
 		})
@@ -429,6 +428,89 @@ func (ur *UserService) Sessions(ctx context.Context, header_auth []string) (*res
 					"count": count,
 					"data":  respAuths,
 				},
+			}, nil
+		} else {
+			return &response.Response{
+				Code:     response.ErrorPermissionForbidden,
+				Status:   response.StatusError,
+				Message:  "forbidden",
+				HttpCode: http.StatusForbidden,
+			}, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (ur *UserService) DestroySession(ctx context.Context, header_auth []string, session_id int) (*response.Response, error) {
+	// Parse header Authorization and get token
+	split := strings.Split(header_auth[0], " ")
+	token := split[1]
+
+	// Checking on correct JWT
+	if _, err := ajwt.IsJWT(token, os.Getenv("APP_JWT_SECRET")); err != nil {
+		return nil, err
+	}
+
+	payload, err := ajwt.GetClaims(token, os.Getenv("APP_JWT_SECRET"))
+
+	if err != nil {
+		return nil, err
+	}
+
+	user_id, _ := strconv.Atoi(fmt.Sprintf("%v", payload["user_id"]))
+
+	if user_id > 0 {
+		// Trying find a user in the users table
+		repoAuth := repository.NewAuthRepo(ur.db)
+		auth, err := repoAuth.GetAuth(ctx, domainAuth.AuthDto{Id: session_id, UserId: user_id})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if auth.Id > 0 {
+			// start transaction
+			tx, err := ur.db.Db.BeginTx(ctx, pgx.TxOptions{})
+
+			if err != nil {
+				return nil, err
+			}
+
+			defer func() {
+				if err != nil {
+					tx.Rollback(ctx)
+				}
+			}()
+
+			// Deleting session
+			cmdtag, err := repoAuth.DeleteAuth(ctx, domainAuth.DestroyDto{Id: int(auth.Id)})
+
+			if err != nil {
+				return nil, err
+			}
+
+			// If whole successfully, then resets refresh token
+			if cmdtag.RowsAffected() <= 0 {
+				tx.Rollback(ctx)
+
+				return nil, err
+			} else {
+				tx.Commit(ctx)
+
+				return &response.Response{
+					Code:    response.ErrorEmpty,
+					Status:  response.StatusSuccess,
+					Message: "Session successfully destroyed",
+					Result:  nil,
+				}, nil
+			}
+		} else {
+			return &response.Response{
+				Code:     response.ErrorPermissionForbidden,
+				Status:   response.StatusError,
+				Message:  "forbidden",
+				HttpCode: http.StatusForbidden,
 			}, nil
 		}
 	}
