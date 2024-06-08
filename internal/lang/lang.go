@@ -24,7 +24,8 @@ func Get(lang string) (Lang, bool) {
 }
 
 type Lang struct {
-	Mail sections.Mail `yaml:"mail"`
+	Mail       sections.Mail       `yaml:"mail"`
+	Validation sections.Validation `yaml:"validation"`
 }
 
 func mustLoad() map[string]Lang {

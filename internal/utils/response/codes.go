@@ -23,4 +23,5 @@ const (
 	ErrorTokenExpired = 8
 	// When access forbidden
 	ErrorPermissionForbidden = 9
+	ErrorValidation          = 10
 )

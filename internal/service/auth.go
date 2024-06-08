@@ -176,7 +176,7 @@ func (ar *AuthService) Login(ctx context.Context, dto domainAuth.LoginDto) (*res
 	return &response.Response{
 		Code:    response.ErrorAccountNotFound,
 		Status:  response.StatusError,
-		Message: "invalid email or passwordfor the account",
+		Message: "invalid email or password for the account",
 	}, nil
 }
 
