@@ -1,13 +1,13 @@
 package request
 
 import (
-	"fmt"
-	"log"
 	"reflect"
 	"regexp"
+	"strings"
 
 	"apibgo/internal/lang"
 	"apibgo/internal/lang/sections"
+	"apibgo/pkg/utils"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -29,10 +29,6 @@ func (v *Validator) Validate(d interface{}) (bool, []string) {
 	err := validate.Struct(d)
 
 	if err != nil {
-
-		// this check is only needed when your code could produce
-		// an invalid value for validation such as interface with nil
-		// value most including myself do not usually have code like this.
 		if _, ok := err.(*validator.InvalidValidationError); ok {
 			return false, []string{err.Error()}
 		}
@@ -40,15 +36,14 @@ func (v *Validator) Validate(d interface{}) (bool, []string) {
 		messages := []string{}
 
 		for _, err := range err.(validator.ValidationErrors) {
-			fmt.Println(err.StructField())
+			values := map[string]string{}
 
-			fmt.Println(err.Tag())
-			// fmt.Println(err.ActualTag())
-			// fmt.Println(err.Type())
-			// // fmt.Println(err.Value())
-			// fmt.Println()
+			if len(err.Param()) > 0 {
+				values = v.getAppends(err.Tag(), err.Param())
+			}
 
-			messages = append(messages, v.getMessage(err.StructField(), []string{err.Tag()}, map[string]string{}))
+			message := v.getMessage(err.Tag(), []string{err.Field()}, values)
+			messages = append(messages, message)
 		}
 
 		// from here you can create your own error messages in whatever language you wish
@@ -58,32 +53,73 @@ func (v *Validator) Validate(d interface{}) (bool, []string) {
 	return true, []string{}
 }
 
-func (v *Validator) getMessage(field string, attributes []string, values map[string]string) string {
+func (v *Validator) getAppends(tag string, param string) map[string]string {
+	var keys map[string]string = map[string]string{}
+	var field reflect.Value
+
 	vl := reflect.ValueOf(v.Messages)
-	value := vl.FieldByName(field)
-	msg := value.String()
+	tp := reflect.TypeOf(v.Messages)
 
-	for _, attr := range attributes {
-		re, err := regexp.Compile(`:attribute`)
-
-		if err != nil {
-			log.Fatal(err)
+	for i := 0; i < tp.NumField(); i++ {
+		if tp.Field(i).Tag.Get("yaml") == tag {
+			field = vl.Field(i)
+			break
 		}
-
-		msg = string(re.ReplaceAll([]byte(msg), []byte(attr)))
 	}
 
-	for key, val := range values {
-		re, err := regexp.Compile(`:` + key)
+	if field.IsValid() {
+		re, _ := regexp.Compile(`:\w+`)
+		matches := re.FindAllString(field.String(), -1)
+		params := strings.Split(param, " ")
 
-		if err != nil {
-			log.Fatal(err)
+		if utils.StringInSlice(":other", matches) &&
+			utils.StringInSlice(":value", matches) {
+			keys["other"] = params[0]
+			keys["value"] = params[1]
+		} else if utils.StringInSlice(":other", matches) {
+			keys["other"] = strings.Join(params, " ")
+		} else if utils.StringInSlice(":values", matches) {
+			keys["values"] = strings.Join(params, " ")
+		} else if utils.StringInSlice(":value", matches) {
+			keys["value"] = strings.Join(params, " ")
 		}
-
-		msg = string(re.ReplaceAll([]byte(msg), []byte(val)))
 	}
 
-	fmt.Println("msg -->", msg)
+	return keys
+}
+
+func (v *Validator) getMessage(tag string, attributes []string, values map[string]string) string {
+	var msg string
+	var field reflect.Value
+
+	vl := reflect.ValueOf(v.Messages)
+	tp := reflect.TypeOf(v.Messages)
+
+	for i := 0; i < tp.NumField(); i++ {
+		if tp.Field(i).Tag.Get("yaml") == tag {
+			field = vl.Field(i)
+			break
+		}
+	}
+
+	if field.IsValid() {
+		msg = field.String()
+
+		for _, attr := range attributes {
+			re, _ := regexp.Compile(`:attribute`)
+			msg = string(re.ReplaceAll([]byte(msg), []byte(attr)))
+		}
+
+		for key, val := range values {
+			re, _ := regexp.Compile(`:` + key)
+			msg = string(re.ReplaceAll([]byte(msg), []byte(val)))
+		}
+
+		// for key, val := range custom {
+		// 	re, _ := regexp.Compile(`:` + key)
+		// 	msg = string(re.ReplaceAll([]byte(msg), []byte(val)))
+		// }
+	}
 
 	return msg
 }

@@ -30,8 +30,9 @@ type RegistrationDto struct {
 	Email           string `json:"email" validate:"required,email"`
 	Password        string `json:"password" validate:"required"`
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
-	Name            string `json:"name" validate:"required,alphaunicode"`
-	Surname         string `json:"surname" validate:"required,alphaunicode"`
+	Name            string `json:"name" validate:"required,alpha"`
+	Surname         string `json:"surname" validate:"required,alpha"`
+	Oneof           string `json:"oneof" validate:"oneof=one two four"`
 }
 
 type ActivationDto struct {

@@ -53,6 +53,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 				Code:    response.ErrorValidation,
 				Message: "validation error",
 				Result:  failMessages,
+				Status:  response.StatusError,
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Write(response.CreateResponseData())
@@ -99,6 +100,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		b, _ := io.ReadAll(r.Body)
 		dto := domainAuth.RegistrationDto{}
 		_ = json.Unmarshal(b, &dto)
+
+		validator := request.NewValidator()
+		isValid, failMessages := validator.Validate(dto)
+
+		if !isValid {
+			response := response.Response{
+				Code:    response.ErrorValidation,
+				Message: "validation error",
+				Result:  failMessages,
+				Status:  response.StatusError,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(response.CreateResponseData())
+			return
+		}
 
 		response, err := authService.Registration(context.Background(), dto)
 
