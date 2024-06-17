@@ -11,7 +11,10 @@ import (
 	"apibgo/internal/transport/rest/middleware"
 	"apibgo/internal/transport/rest/routes"
 
+	"apibgo/docs/swagger"
+
 	"github.com/gorilla/mux"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type Instance struct {
@@ -21,9 +24,6 @@ type Instance struct {
 }
 
 func Run() {
-	// Load .env files for global
-	// univenv.Load()
-
 	instance := instance.GetInstance()
 
 	_routes := []rest.Handler{
@@ -38,10 +38,21 @@ func Run() {
 	}
 
 	r := mux.NewRouter()
+
 	rest.NewRouter(r, _routes...)
 	r.Use(mux.CORSMethodMiddleware(r))
 
-	if err := http.ListenAndServe(instance.Config.HTTPServer.Address, r); err == nil {
-		instance.Log.Info("starting restapi server")
+	// Swagger UI
+	swagger.SwaggerInfo.Title = "Swagger RESTGO API"
+	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
+
+	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
+
+	instance.Log.Info("starting restapi server at http://" + instance.Config.Address)
+	instance.Log.Info("Swagger URL: http://" + instance.Config.Address + "/swagger/")
+
+	if err := http.ListenAndServe(instance.Config.HTTPServer.Address, r); err != nil {
+		instance.Log.Error("failed to start server", err)
 	}
+
 }

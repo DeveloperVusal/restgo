@@ -12,8 +12,8 @@ type Status string
 
 const (
 	StatusSuccess Status = "success"
-	StatusError          = "error"
-	StatusWarning        = "warning"
+	StatusError   Status = "error"
+	StatusWarning Status = "warning"
 )
 
 type Response struct {
@@ -23,6 +23,13 @@ type Response struct {
 	Result   interface{}
 	Cookies  []*http.Cookie
 	HttpCode int
+}
+
+type DocResponse struct {
+	Code    byte
+	Status  Status
+	Message string
+	Result  interface{}
 }
 
 func (response *Response) CreateResponseData() []byte {

@@ -32,7 +32,6 @@ type RegistrationDto struct {
 	ConfirmPassword string `json:"confirm_password" validate:"required"`
 	Name            string `json:"name" validate:"required,alpha"`
 	Surname         string `json:"surname" validate:"required,alpha"`
-	Oneof           string `json:"oneof" validate:"oneof=one two four"`
 }
 
 type ActivationDto struct {

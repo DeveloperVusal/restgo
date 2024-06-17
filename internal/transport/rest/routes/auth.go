@@ -18,6 +18,8 @@ import (
 	"apibgo/pkg/logger/feature/slog"
 	"apibgo/pkg/utils"
 
+	_ "apibgo/docs/swagger"
+
 	"github.com/gorilla/mux"
 )
 
@@ -27,111 +29,10 @@ type Auth struct {
 }
 
 func (a *Auth) NewHandler(r *mux.Router) {
-	// route: /auth/login/
-	r.HandleFunc("/auth/login/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
 
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	r.HandleFunc("/auth/login/", a.AuthLogin).Methods(http.MethodPost)
 
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.LoginDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		validator := request.NewValidator()
-		isValid, failMessages := validator.Validate(dto)
-
-		if !isValid {
-			response := response.Response{
-				Code:    response.ErrorValidation,
-				Message: "validation error",
-				Result:  failMessages,
-				Status:  response.StatusError,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(response.CreateResponseData())
-			return
-		}
-
-		dto.Ip = utils.RealIp(r)
-		dto.UserAgent = r.UserAgent()
-
-		response, err := authService.Login(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute Login service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if response == nil {
-				log.Error("response is empty")
-				w.WriteHeader(http.StatusInternalServerError)
-
-				return
-			}
-		}
-
-		response.SetCookies(&w, log)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/registration/
-	r.HandleFunc("/auth/registration/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.RegistrationDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		validator := request.NewValidator()
-		isValid, failMessages := validator.Validate(dto)
-
-		if !isValid {
-			response := response.Response{
-				Code:    response.ErrorValidation,
-				Message: "validation error",
-				Result:  failMessages,
-				Status:  response.StatusError,
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.Write(response.CreateResponseData())
-			return
-		}
-
-		response, err := authService.Registration(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute Registration service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		if response.HttpCode == 0 {
-			response.HttpCode = http.StatusOK
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
-		w.WriteHeader(response.HttpCode)
-	}).Methods(http.MethodPost)
+	r.HandleFunc("/auth/registration/", a.AuthRegistration).Methods(http.MethodPost)
 
 	// route: /auth/logout/
 	r.HandleFunc("/auth/logout/", func(w http.ResponseWriter, r *http.Request) {
@@ -418,4 +319,133 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(response.CreateResponseData())
 	}).Methods(http.MethodPost)
+}
+
+// HandleAuthLogin handles authentication login.
+// @Summary Handle authentication login
+// @Description Handles user authentication.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param email body string true "Email"
+// @Param password body string true "Password"
+// @Success 200 {object} response.DocResponse
+// @Failure 400 {object} response.DocResponse
+// @Router /auth/login [post]
+func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.LoginDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	validator := request.NewValidator()
+	isValid, failMessages := validator.Validate(dto)
+
+	if !isValid {
+		response := response.Response{
+			Code:    response.ErrorValidation,
+			Message: "validation error",
+			Result:  failMessages,
+			Status:  response.StatusError,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+		return
+	}
+
+	dto.Ip = utils.RealIp(r)
+	dto.UserAgent = r.UserAgent()
+
+	response, err := authService.Login(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute Login service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if response == nil {
+			log.Error("response is empty")
+			w.WriteHeader(http.StatusInternalServerError)
+
+			return
+		}
+	}
+
+	response.SetCookies(&w, log)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response.CreateResponseData())
+}
+
+// HandleAuthLogin handles authentication login.
+// @Summary Handle authentication login
+// @Description Handles user authentication.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param email body string true "Email"
+// @Param password body string true "Password"
+// @Param confirm_password body string true "Confirm Password"
+// @Param name body string true "Name"
+// @Param surname body string true "Surname"
+// @Success 200 {object} response.DocResponse
+// @Failure 400 {object} response.DocResponse
+// @Router /auth/registration [post]
+func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.RegistrationDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	validator := request.NewValidator()
+	isValid, failMessages := validator.Validate(dto)
+
+	if !isValid {
+		response := response.Response{
+			Code:    response.ErrorValidation,
+			Message: "validation error",
+			Result:  failMessages,
+			Status:  response.StatusError,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(response.CreateResponseData())
+		return
+	}
+
+	response, err := authService.Registration(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute Registration service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if response.HttpCode == 0 {
+		response.HttpCode = http.StatusOK
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(response.CreateResponseData())
+	w.WriteHeader(response.HttpCode)
 }

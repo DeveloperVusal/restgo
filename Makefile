@@ -18,5 +18,9 @@ endif
 migrate-action:
 	migrate -source file://schemes -database $(migrate_database) $(cmd)
 
+swag:
+	swag init -g ./cmd/serve/main.go --output ./docs/swagger --parseInternal true
+
 serve:
+	make swag
 	npm run serve
