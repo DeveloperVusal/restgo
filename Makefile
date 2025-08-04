@@ -18,8 +18,10 @@ endif
 migrate-action:
 	migrate -source file://schemes -database $(migrate_database) $(cmd)
 
+GOPATH := $(shell go env GOPATH)
+
 swag:
-	swag init -g ./cmd/serve/main.go --output ./docs/swagger --parseInternal true
+	@$(GOPATH)/bin/swag init -g ./cmd/serve/main.go --output ./docs/swagger --parseInternal true
 
 serve:
 	make swag
