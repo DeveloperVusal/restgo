@@ -11,8 +11,6 @@ import (
 	"apibgo/internal/transport/rest/middleware"
 	"apibgo/internal/transport/rest/routes"
 
-	"apibgo/docs/swagger"
-
 	"github.com/gorilla/mux"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -43,9 +41,6 @@ func Run() {
 	r.Use(mux.CORSMethodMiddleware(r))
 
 	// Swagger UI
-	swagger.SwaggerInfo.Title = "Swagger RESTGO API"
-	// docs.SwaggerInfo.Schemes = []string{"http", "https"}
-
 	r.PathPrefix("/swagger/").Handler(httpSwagger.WrapHandler)
 
 	instance.Log.Info("starting restapi server at http://" + instance.Config.Address)

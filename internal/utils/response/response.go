@@ -9,11 +9,16 @@ import (
 )
 
 type Status string
+type StatusBadError string
 
 const (
 	StatusSuccess Status = "success"
 	StatusError   Status = "error"
 	StatusWarning Status = "warning"
+)
+
+const (
+	StatusError2 StatusBadError = "error"
 )
 
 type Response struct {
@@ -25,11 +30,17 @@ type Response struct {
 	HttpCode int
 }
 
-type DocResponse struct {
+type DocSuccessResponse struct {
 	Code    byte
 	Status  Status
 	Message string
 	Result  interface{}
+}
+
+type DocErrorResponse struct {
+	Code    byte
+	Status  StatusBadError
+	Message string
 }
 
 func (response *Response) CreateResponseData() []byte {

@@ -2,7 +2,7 @@ package main
 
 import "apibgo/internal/app"
 
-// @title           Swagger Example API
+// @title           Swagger RESTGO API
 // @version         1.0
 // @description     This is a sample server celler server.
 // @termsOfService  http://swagger.io/terms/

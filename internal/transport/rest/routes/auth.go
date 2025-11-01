@@ -1,6 +1,7 @@
 package routes
 
 import (
+	myhttp "apibgo/internal/utils/http"
 	"context"
 	"encoding/json"
 	"io"
@@ -54,7 +55,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		log.Info("starting database")
 
 		authService := service.NewAuthService(pg)
-		response, err := authService.Logout(context.Background(), r.Header["Authorization"])
+		_response, err := authService.Logout(context.Background(), r.Header["Authorization"])
 
 		if err != nil {
 			log.Error("failed to execute Logout service", slog.Err(err))
@@ -62,9 +63,9 @@ func (a *Auth) NewHandler(r *mux.Router) {
 			return
 		}
 
-		response.SetCookies(&w, log)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		_response.SetCookies(&w, log)
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
 	// route: /auth/refresh/
@@ -95,7 +96,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		}
 
 		authService := service.NewAuthService(pg)
-		response, err := authService.Refresh(context.Background(), cookie, dto)
+		_response, err := authService.Refresh(context.Background(), cookie, dto)
 
 		if err != nil {
 			log.Error("failed to execute Refresh service", slog.Err(err))
@@ -103,9 +104,9 @@ func (a *Auth) NewHandler(r *mux.Router) {
 			return
 		}
 
-		response.SetCookies(&w, log)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		_response.SetCookies(&w, log)
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodGet)
 
 	// route: /auth/verify/
@@ -164,21 +165,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		dto := domainAuth.ActivationDto{}
 		_ = json.Unmarshal(b, &dto)
 
-		response, err := authService.Activation(context.Background(), dto)
+		_response, err := authService.Activation(context.Background(), dto)
 
 		if err != nil {
 			log.Error("failed to execute Activation service", slog.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
-			if response == nil {
+			if _response == nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
 	// route: /auth/forgot/
@@ -199,21 +200,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		dto := domainAuth.ForgotDto{}
 		_ = json.Unmarshal(b, &dto)
 
-		response, err := authService.Forgot(context.Background(), dto)
+		_response, err := authService.Forgot(context.Background(), dto)
 
 		if err != nil {
 			log.Error("failed to execute Forgot service", slog.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
-			if response == nil {
+			if _response == nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
 	// route: /auth/recovery/
@@ -234,21 +235,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		dto := domainAuth.RecoveryDto{}
 		_ = json.Unmarshal(b, &dto)
 
-		response, err := authService.Recovery(context.Background(), dto)
+		_response, err := authService.Recovery(context.Background(), dto)
 
 		if err != nil {
 			log.Error("failed to execute Recovery service", slog.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
-			if response == nil {
+			if _response == nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
 	// route: /auth/confirm_check/
@@ -269,21 +270,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		dto := domainAuth.ConfirmCheckDto{}
 		_ = json.Unmarshal(b, &dto)
 
-		response, err := authService.ConfirmCheck(context.Background(), dto)
+		_response, err := authService.ConfirmCheck(context.Background(), dto)
 
 		if err != nil {
 			log.Error("failed to execute ConfirmCheck service", slog.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
-			if response == nil {
+			if _response == nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 
 	// route: /auth/resend/{section}
@@ -303,21 +304,21 @@ func (a *Auth) NewHandler(r *mux.Router) {
 		authService := service.NewAuthService(pg)
 		jsond, _ := io.ReadAll(r.Body)
 
-		response, err := authService.Resend(context.Background(), service.SectionSend(vars["section"]), jsond)
+		_response, err := authService.Resend(context.Background(), service.SectionSend(vars["section"]), jsond)
 
 		if err != nil {
 			log.Error("failed to execute Resend service", slog.Err(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		} else {
-			if response == nil {
+			if _response == nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 	}).Methods(http.MethodPost)
 }
 
@@ -329,8 +330,8 @@ func (a *Auth) NewHandler(r *mux.Router) {
 // @Produce json
 // @Param email body string true "Email"
 // @Param password body string true "Password"
-// @Success 200 {object} response.DocResponse
-// @Failure 400 {object} response.DocResponse
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 400 {object} response.DocErrorResponse
 // @Router /auth/login [post]
 func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
@@ -353,28 +354,28 @@ func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 	isValid, failMessages := validator.Validate(dto)
 
 	if !isValid {
-		response := response.Response{
+		_response := response.Response{
 			Code:    response.ErrorValidation,
 			Message: "validation error",
 			Result:  failMessages,
 			Status:  response.StatusError,
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 		return
 	}
 
 	dto.Ip = utils.RealIp(r)
 	dto.UserAgent = r.UserAgent()
 
-	response, err := authService.Login(context.Background(), dto)
+	_response, err := authService.Login(context.Background(), dto)
 
 	if err != nil {
 		log.Error("failed to execute Login service", slog.Err(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	} else {
-		if response == nil {
+		if _response == nil {
 			log.Error("response is empty")
 			w.WriteHeader(http.StatusInternalServerError)
 
@@ -382,9 +383,9 @@ func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	response.SetCookies(&w, log)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(response.CreateResponseData())
+	_response.SetCookies(&w, log)
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
 }
 
 // HandleAuthLogin handles authentication login.
@@ -398,8 +399,8 @@ func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 // @Param confirm_password body string true "Confirm Password"
 // @Param name body string true "Name"
 // @Param surname body string true "Surname"
-// @Success 200 {object} response.DocResponse
-// @Failure 400 {object} response.DocResponse
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 400 {object} response.DocErrorResponse
 // @Router /auth/registration [post]
 func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
@@ -422,18 +423,18 @@ func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
 	isValid, failMessages := validator.Validate(dto)
 
 	if !isValid {
-		response := response.Response{
+		_response := response.Response{
 			Code:    response.ErrorValidation,
 			Message: "validation error",
 			Result:  failMessages,
 			Status:  response.StatusError,
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(response.CreateResponseData())
+		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+		w.Write(_response.CreateResponseData())
 		return
 	}
 
-	response, err := authService.Registration(context.Background(), dto)
+	_response, err := authService.Registration(context.Background(), dto)
 
 	if err != nil {
 		log.Error("failed to execute Registration service", slog.Err(err))
@@ -441,11 +442,11 @@ func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if response.HttpCode == 0 {
-		response.HttpCode = http.StatusOK
+	if _response.HttpCode == 0 {
+		_response.HttpCode = http.StatusOK
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(response.CreateResponseData())
-	w.WriteHeader(response.HttpCode)
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+	w.WriteHeader(_response.HttpCode)
 }
