@@ -30,296 +30,25 @@ type Auth struct {
 }
 
 func (a *Auth) NewHandler(r *mux.Router) {
-
 	r.HandleFunc("/auth/login/", a.AuthLogin).Methods(http.MethodPost)
 
 	r.HandleFunc("/auth/registration/", a.AuthRegistration).Methods(http.MethodPost)
 
-	// route: /auth/logout/
-	r.HandleFunc("/auth/logout/", func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.Header["Authorization"]; !ok {
-			w.WriteHeader(http.StatusBadRequest)
+	r.HandleFunc("/auth/logout/", a.AuthLogout).Methods(http.MethodPost)
 
-			return
-		}
+	r.HandleFunc("/auth/refresh/", a.AuthRefresh).Methods(http.MethodGet)
 
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
+	r.HandleFunc("/auth/verify/", a.AuthVerify).Methods(http.MethodGet)
 
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	r.HandleFunc("/auth/activation/", a.AuthActivation).Methods(http.MethodPatch)
 
-		log.Info("starting database")
+	r.HandleFunc("/auth/forgot/", a.AuthForgot).Methods(http.MethodPost)
 
-		authService := service.NewAuthService(pg)
-		_response, err := authService.Logout(context.Background(), r.Header["Authorization"])
+	r.HandleFunc("/auth/recovery/", a.AuthRecovery).Methods(http.MethodPost)
 
-		if err != nil {
-			log.Error("failed to execute Logout service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	r.HandleFunc("/auth/confirm_check/", a.AuthConfirmCheck).Methods(http.MethodPost)
 
-		_response.SetCookies(&w, log)
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/refresh/
-	r.HandleFunc("/auth/refresh/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		cookie, err := r.Cookie("refresh_token")
-
-		if err != nil {
-			log.Error("failed to get cookie", slog.Err(err))
-			w.WriteHeader(http.StatusBadRequest)
-
-			return
-		}
-
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		dto := domainAuth.LoginDto{
-			Ip:        utils.RealIp(r),
-			UserAgent: r.UserAgent(),
-		}
-
-		authService := service.NewAuthService(pg)
-		_response, err := authService.Refresh(context.Background(), cookie, dto)
-
-		if err != nil {
-			log.Error("failed to execute Refresh service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		_response.SetCookies(&w, log)
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodGet)
-
-	// route: /auth/verify/
-	r.HandleFunc("/auth/verify/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-
-		if _, ok := r.Header["Authorization"]; !ok {
-			log.Error("failed to get header of the Authorization")
-			w.WriteHeader(http.StatusBadRequest)
-
-			return
-		}
-
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		// Parse header Authorization and get token
-		split := strings.Split(r.Header["Authorization"][0], " ")
-		token := split[1]
-		isVerify, err := authService.VerifyToken(context.Background(), token)
-
-		if err != nil {
-			log.Error("failed to execute VerifyToken service", slog.Err(err))
-		}
-
-		if !isVerify {
-			w.WriteHeader(http.StatusUnauthorized)
-		}
-
-		w.WriteHeader(http.StatusOK)
-	}).Methods(http.MethodGet)
-
-	// route: /auth/activation/
-	r.HandleFunc("/auth/activation/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.ActivationDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		_response, err := authService.Activation(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute Activation service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if _response == nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/forgot/
-	r.HandleFunc("/auth/forgot/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.ForgotDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		_response, err := authService.Forgot(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute Forgot service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if _response == nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/recovery/
-	r.HandleFunc("/auth/recovery/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.RecoveryDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		_response, err := authService.Recovery(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute Recovery service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if _response == nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/confirm_check/
-	r.HandleFunc("/auth/confirm_check/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		authService := service.NewAuthService(pg)
-		b, _ := io.ReadAll(r.Body)
-		dto := domainAuth.ConfirmCheckDto{}
-		_ = json.Unmarshal(b, &dto)
-
-		_response, err := authService.ConfirmCheck(context.Background(), dto)
-
-		if err != nil {
-			log.Error("failed to execute ConfirmCheck service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if _response == nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
-
-	// route: /auth/resend/{section}
-	r.HandleFunc("/auth/resend/{section}/", func(w http.ResponseWriter, r *http.Request) {
-		log := logger.Setup(a.Config.Env)
-		pg, err := pgsql.New(a.Storage, "master")
-
-		if err != nil {
-			log.Error("failed to init storage", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		log.Info("starting database")
-
-		vars := mux.Vars(r)
-		authService := service.NewAuthService(pg)
-		jsond, _ := io.ReadAll(r.Body)
-
-		_response, err := authService.Resend(context.Background(), service.SectionSend(vars["section"]), jsond)
-
-		if err != nil {
-			log.Error("failed to execute Resend service", slog.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else {
-			if _response == nil {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-		}
-
-		w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
-		w.Write(_response.CreateResponseData())
-	}).Methods(http.MethodPost)
+	r.HandleFunc("/auth/resend/{section}/", a.AuthResend).Methods(http.MethodPost)
 }
 
 // HandleAuthLogin handles authentication login.
@@ -388,9 +117,9 @@ func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
-// HandleAuthLogin handles authentication login.
-// @Summary Handle authentication login
-// @Description Handles user authentication.
+// HandleAuthLogin handles registration user.
+// @Summary Handle registration user
+// @Description Handles user registration.
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -449,4 +178,290 @@ func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
 	w.Write(_response.CreateResponseData())
 	w.WriteHeader(_response.HttpCode)
+}
+
+// HandleAuthLogin handles logout user.
+// @Summary Handle logout user
+// @Description Handles logout user.
+// @Tags auth
+// @Param Authorization header string true "Bearer token"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/logout [post]
+func (a *Auth) AuthLogout(w http.ResponseWriter, r *http.Request) {
+	if _, ok := r.Header["Authorization"]; !ok {
+		w.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	_response, err := authService.Logout(context.Background(), r.Header["Authorization"])
+
+	if err != nil {
+		log.Error("failed to execute Logout service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_response.SetCookies(&w, log)
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthRefresh(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	cookie, err := r.Cookie("refresh_token")
+
+	if err != nil {
+		log.Error("failed to get cookie", slog.Err(err))
+		w.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	dto := domainAuth.LoginDto{
+		Ip:        utils.RealIp(r),
+		UserAgent: r.UserAgent(),
+	}
+
+	authService := service.NewAuthService(pg)
+	_response, err := authService.Refresh(context.Background(), cookie, dto)
+
+	if err != nil {
+		log.Error("failed to execute Refresh service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_response.SetCookies(&w, log)
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthVerify(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+
+	if _, ok := r.Header["Authorization"]; !ok {
+		log.Error("failed to get header of the Authorization")
+		w.WriteHeader(http.StatusBadRequest)
+
+		return
+	}
+
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	// Parse header Authorization and get token
+	split := strings.Split(r.Header["Authorization"][0], " ")
+	token := split[1]
+	isVerify, err := authService.VerifyToken(context.Background(), token)
+
+	if err != nil {
+		log.Error("failed to execute VerifyToken service", slog.Err(err))
+	}
+
+	if !isVerify {
+		w.WriteHeader(http.StatusUnauthorized)
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *Auth) AuthActivation(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.ActivationDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	_response, err := authService.Activation(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute Activation service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if _response == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthForgot(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.ForgotDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	_response, err := authService.Forgot(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute Forgot service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if _response == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthRecovery(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.RecoveryDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	_response, err := authService.Recovery(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute Recovery service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if _response == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthConfirmCheck(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	authService := service.NewAuthService(pg)
+	b, _ := io.ReadAll(r.Body)
+	dto := domainAuth.ConfirmCheckDto{}
+	_ = json.Unmarshal(b, &dto)
+
+	_response, err := authService.ConfirmCheck(context.Background(), dto)
+
+	if err != nil {
+		log.Error("failed to execute ConfirmCheck service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if _response == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
+}
+
+func (a *Auth) AuthResend(w http.ResponseWriter, r *http.Request) {
+	log := logger.Setup(a.Config.Env)
+	pg, err := pgsql.New(a.Storage, "master")
+
+	if err != nil {
+		log.Error("failed to init storage", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	log.Info("starting database")
+
+	vars := mux.Vars(r)
+	authService := service.NewAuthService(pg)
+	jsond, _ := io.ReadAll(r.Body)
+
+	_response, err := authService.Resend(context.Background(), service.SectionSend(vars["section"]), jsond)
+
+	if err != nil {
+		log.Error("failed to execute Resend service", slog.Err(err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	} else {
+		if _response == nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", string(myhttp.ContentType_JSON))
+	w.Write(_response.CreateResponseData())
 }

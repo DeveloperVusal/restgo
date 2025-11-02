@@ -21,7 +21,7 @@ migrate-action:
 GOPATH := $(shell go env GOPATH)
 
 swag:
-	@$(GOPATH)/bin/swag init -g ./cmd/serve/main.go --output ./docs/swagger --parseInternal true
+	@$(GOPATH)/bin/swag init -g cmd/serve/main.go --output docs/swagger --parseInternal true --outputTypes json,yaml,go
 
 serve:
 	make swag
