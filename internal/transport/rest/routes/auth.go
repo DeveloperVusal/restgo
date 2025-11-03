@@ -46,7 +46,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 
 	r.HandleFunc("/auth/recovery/", a.AuthRecovery).Methods(http.MethodPost)
 
-	r.HandleFunc("/auth/confirm_check/", a.AuthConfirmCheck).Methods(http.MethodPost)
+	r.HandleFunc("/auth/confirm-check/", a.AuthConfirmCheck).Methods(http.MethodPost)
 
 	r.HandleFunc("/auth/resend/{section}/", a.AuthResend).Methods(http.MethodPost)
 }
@@ -54,9 +54,7 @@ func (a *Auth) NewHandler(r *mux.Router) {
 // HandleAuthLogin handles authentication login.
 // @Summary Handle authentication login
 // @Description Handles user authentication.
-// @Tags auth
-// @Accept json
-// @Produce json
+// @Tags Auth
 // @Param email body string true "Email"
 // @Param password body string true "Password"
 // @Success 200 {object} response.DocSuccessResponse
@@ -118,11 +116,9 @@ func (a *Auth) AuthLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleAuthLogin handles registration user.
-// @Summary Handle registration user
-// @Description Handles user registration.
-// @Tags auth
-// @Accept json
-// @Produce json
+// @Summary Handle registration account
+// @Description Handles user account registration.
+// @Tags Auth
 // @Param email body string true "Email"
 // @Param password body string true "Password"
 // @Param confirm_password body string true "Confirm Password"
@@ -181,9 +177,9 @@ func (a *Auth) AuthRegistration(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleAuthLogin handles logout user.
-// @Summary Handle logout user
-// @Description Handles logout user.
-// @Tags auth
+// @Summary Handle logout account
+// @Description Handles logout user account.
+// @Tags Auth
 // @Param Authorization header string true "Bearer token"
 // @Success 200 {object} response.DocSuccessResponse
 // @Failure 422 {object} response.DocErrorResponse
@@ -220,6 +216,14 @@ func (a *Auth) AuthLogout(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles refresh jwt tokens.
+// @Summary Handle refresh jwt tokens
+// @Description Handles refresh jwt tokens.
+// @Tags Auth
+// @Param Authorization header string true "Bearer token"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/refresh [get]
 func (a *Auth) AuthRefresh(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	cookie, err := r.Cookie("refresh_token")
@@ -260,6 +264,14 @@ func (a *Auth) AuthRefresh(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles verify jwt token.
+// @Summary Handle verify jwt token
+// @Description Handles verify jwt token.
+// @Tags Auth
+// @Param Authorization header string true "Bearer token"
+// @Success 200 {object} nil
+// @Failure 401 {object} nil
+// @Router /auth/verify [get]
 func (a *Auth) AuthVerify(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 
@@ -297,6 +309,16 @@ func (a *Auth) AuthVerify(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// HandleAuthLogin handles account activation.
+// @Summary Handle account activation
+// @Description Handles a user account activation.
+// @Tags Auth
+// @Param email body string true "Email"
+// @Param code body string true "Code"
+// @Param key body string true "Signed key"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/activation [patch]
 func (a *Auth) AuthActivation(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	pg, err := pgsql.New(a.Storage, "master")
@@ -331,6 +353,14 @@ func (a *Auth) AuthActivation(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles account forgot password.
+// @Summary Handle account forgot password
+// @Description Handles a user account forgot password.
+// @Tags Auth
+// @Param email body string true "Email"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/forgot [post]
 func (a *Auth) AuthForgot(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	pg, err := pgsql.New(a.Storage, "master")
@@ -365,6 +395,17 @@ func (a *Auth) AuthForgot(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles account recovery password.
+// @Summary Handle account recovery password
+// @Description Handles a user account recovery password.
+// @Tags Auth
+// @Param email body string true "Email"
+// @Param code body string true "Code"
+// @Param password body string true "Password"
+// @Param confirm_password body string true "Confirm Password"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/recovery [post]
 func (a *Auth) AuthRecovery(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	pg, err := pgsql.New(a.Storage, "master")
@@ -399,6 +440,16 @@ func (a *Auth) AuthRecovery(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles checks confirm code.
+// @Summary Handle checks confirm code
+// @Description Handles checks confirm code.
+// @Tags Auth
+// @Param email body string true "Email"
+// @Param action body service.SectionConfirm true "Action"
+// @Param code body string true "Code"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/confirm-check [post]
 func (a *Auth) AuthConfirmCheck(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	pg, err := pgsql.New(a.Storage, "master")
@@ -433,6 +484,15 @@ func (a *Auth) AuthConfirmCheck(w http.ResponseWriter, r *http.Request) {
 	w.Write(_response.CreateResponseData())
 }
 
+// HandleAuthLogin handles resend confirm code.
+// @Summary Handle resend confirm code
+// @Description Handles resend confirm code.
+// @Tags Auth
+// @Param section path service.SectionSend true "Resend for section"
+// @Param email body string true "Email"
+// @Success 200 {object} response.DocSuccessResponse
+// @Failure 422 {object} response.DocErrorResponse
+// @Router /auth/resend/{section}/ [post]
 func (a *Auth) AuthResend(w http.ResponseWriter, r *http.Request) {
 	log := logger.Setup(a.Config.Env)
 	pg, err := pgsql.New(a.Storage, "master")
